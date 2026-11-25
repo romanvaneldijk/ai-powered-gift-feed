@@ -1,0 +1,19 @@
+{
+  "id": "demo-10",
+  "type": "gift",
+  "title": "Hand-thrown ceramic mug",
+  "shop": "Demo Ceramics",
+  "url": "https://example.com/demo/demo-10",
+  "price": 16.0,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "coffee",
+    "handmade"
+  ],
+  "reason": "For your morning coffee",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:09:00+00:00",
+  "status": "new"
+}

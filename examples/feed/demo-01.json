@@ -1,0 +1,19 @@
+{
+  "id": "demo-01",
+  "type": "gift",
+  "title": "Cast iron grill pan",
+  "shop": "Demo Kitchen Shop",
+  "url": "https://example.com/demo/demo-01",
+  "price": 39.95,
+  "tier": "medium",
+  "image": null,
+  "tags": [
+    "cooking",
+    "kitchen"
+  ],
+  "reason": "Because you like cooking",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:00:00+00:00",
+  "status": "new"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "demo-14",
+  "type": "gift",
+  "title": "Hot sauce tasting set",
+  "shop": "Demo Food",
+  "url": "https://example.com/demo/demo-14",
+  "price": 12.5,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "food",
+    "funny"
+  ],
+  "reason": "A wildcard to test your taste",
+  "kind": "wildcard",
+  "source": "",
+  "found_at": "2026-11-25T08:13:00+00:00",
+  "status": "new"
+}

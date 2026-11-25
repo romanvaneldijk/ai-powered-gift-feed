@@ -1,0 +1,19 @@
+{
+  "id": "demo-11",
+  "type": "gift",
+  "title": "Head torch, rechargeable",
+  "shop": "Demo Outdoor",
+  "url": "https://example.com/demo/demo-11",
+  "price": 29.0,
+  "tier": "medium",
+  "image": null,
+  "tags": [
+    "hiking",
+    "gadget"
+  ],
+  "reason": "Handy on winter hikes",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:10:00+00:00",
+  "status": "new"
+}

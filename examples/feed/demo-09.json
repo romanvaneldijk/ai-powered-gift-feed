@@ -1,0 +1,19 @@
+{
+  "id": "demo-09",
+  "type": "gift",
+  "title": "Dutch oven, 24 cm",
+  "shop": "Demo Kitchen Shop",
+  "url": "https://example.com/demo/demo-09",
+  "price": 149.0,
+  "tier": "big",
+  "image": null,
+  "tags": [
+    "cooking",
+    "kitchen"
+  ],
+  "reason": "A big wish for a home cook",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:08:00+00:00",
+  "status": "new"
+}

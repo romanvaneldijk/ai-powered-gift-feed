@@ -1,0 +1,19 @@
+{
+  "id": "demo-03",
+  "type": "gift",
+  "title": "Insulated hiking flask",
+  "shop": "Demo Outdoor",
+  "url": "https://example.com/demo/demo-03",
+  "price": 24.95,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "hiking",
+    "outdoor"
+  ],
+  "reason": "Because you like hiking",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:02:00+00:00",
+  "status": "new"
+}

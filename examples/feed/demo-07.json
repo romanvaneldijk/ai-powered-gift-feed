@@ -1,0 +1,19 @@
+{
+  "id": "demo-07",
+  "type": "gift",
+  "title": "Wooden cooperative board game",
+  "shop": "Demo Games",
+  "url": "https://example.com/demo/demo-07",
+  "price": 29.99,
+  "tier": "medium",
+  "image": null,
+  "tags": [
+    "board-games",
+    "social"
+  ],
+  "reason": "You were curious about board games",
+  "kind": "explore",
+  "source": "",
+  "found_at": "2026-11-25T08:06:00+00:00",
+  "status": "new"
+}

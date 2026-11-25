@@ -1,0 +1,19 @@
+{
+  "id": "demo-06",
+  "type": "gift",
+  "title": "Trail map poster",
+  "shop": "Demo Print Studio",
+  "url": "https://example.com/demo/demo-06",
+  "price": 22.0,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "hiking",
+    "home-decor"
+  ],
+  "reason": "Something new: home decor",
+  "kind": "explore",
+  "source": "",
+  "found_at": "2026-11-25T08:05:00+00:00",
+  "status": "new"
+}

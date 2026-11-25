@@ -1,0 +1,19 @@
+{
+  "id": "demo-16",
+  "type": "gift",
+  "title": "Chocolate tasting box",
+  "shop": "Demo Food",
+  "url": "https://example.com/demo/demo-16",
+  "price": 19.95,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "food",
+    "treat"
+  ],
+  "reason": "A small sweet treat",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:15:00+00:00",
+  "status": "new"
+}

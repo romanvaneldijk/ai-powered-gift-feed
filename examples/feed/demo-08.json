@@ -1,0 +1,19 @@
+{
+  "id": "demo-08",
+  "type": "gift",
+  "title": "Pasta making class for two",
+  "shop": "Demo Experiences",
+  "url": "https://example.com/demo/demo-08",
+  "price": 95.0,
+  "tier": "big",
+  "image": null,
+  "tags": [
+    "cooking",
+    "experience"
+  ],
+  "reason": "A big wish for a home cook",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:07:00+00:00",
+  "status": "new"
+}
