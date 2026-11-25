@@ -6,14 +6,17 @@ Usage: python3 app/cli.py <command> [options]   (run `python3 app/cli.py -h` for
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import shutil
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import giftfeed as gf  # noqa: E402
+import scout  # noqa: E402
 
 
 def cmd_init(args, p: gf.Paths) -> None:
@@ -63,9 +66,11 @@ def cmd_status(args, p: gf.Paths) -> None:
     """What /scout needs to know: unseen cards per tier, today's quota and known product URLs."""
     settings = gf.load_settings(p)
     cards = gf.load_cards(p)
+    # --next-deck: the deck on screen right now is already spoken for, so scout for the one after.
+    taken = {c["id"] for c in gf.build_deck(settings, cards)} if args.next_deck else set()
     unseen = {t: 0 for t in gf.TIERS}
     for c in cards:
-        if c["status"] == "new" and c.get("type") == "gift":
+        if c["status"] == "new" and c.get("type") == "gift" and c["id"] not in taken:
             unseen[c["tier"]] += 1
     quota = gf.tier_quota(settings, cards)
     have = gf.wishlist_counts(cards)
@@ -77,10 +82,56 @@ def cmd_status(args, p: gf.Paths) -> None:
         "unseen_cards": unseen,
         "cards_to_find": to_find,
         "unanswered_questions": sum(1 for c in cards if c.get("type") == "question" and c["status"] == "new"),
+        "checked_products_waiting": dict(sorted(
+            Counter(e["tier"] for e in gf.pool_candidates(p, settings)).items())),
     }
     if args.urls:
         out["known_urls"] = sorted(c["url"] for c in cards if c.get("url"))
     print(json.dumps(out, indent=2))
+
+
+def _read_urls(args) -> list[str]:
+    urls = list(args.urls)
+    if args.file:
+        urls += Path(args.file).read_text(encoding="utf-8").split()
+    if not urls:
+        raise SystemExit("give one or more URLs, or --file with one URL per line")
+    return urls
+
+
+def cmd_check(args, p: gf.Paths) -> None:
+    """Read product pages in parallel and print their facts, one JSON line per page."""
+    settings = gf.load_settings(p)
+    started = time.monotonic()
+    fetcher = scout.Fetcher(delay=args.delay)
+    results = gf.save_checked(p, scout.check_many(_read_urls(args), fetcher, workers=args.workers), settings)
+    keep = ("url", "status", "title", "shop", "price", "tier", "in_stock", "image", "known", "note", "final_url")
+    for r in results:
+        row = {k: r[k] for k in keep if r.get(k) not in (None, "")}
+        if not row.get("known"):
+            row.pop("known", None)
+        print(json.dumps(row, ensure_ascii=False))
+    counts = Counter(r["status"] for r in results)
+    usable = sum(1 for r in results if r["status"] == "ok" and r.get("tier") and r.get("in_stock") and not r.get("known"))
+    print(f"# {len(results)} pages in {time.monotonic() - started:.0f}s: "
+          + ", ".join(f"{n} {s}" for s, n in counts.most_common()) + f". {usable} ready to add by url.")
+
+
+def cmd_links(args, p: gf.Paths) -> None:
+    """List product links on shop search pages, category pages or gift guides."""
+    known = {gf.normalise_url(c["url"]) for c in gf.load_cards(p) if c.get("url")}
+    fetcher = scout.Fetcher(delay=args.delay)
+    for page in scout.links_many(_read_urls(args), any_host=args.any_shop, limit=args.limit, fetcher=fetcher):
+        page["links"] = [l for l in page["links"] if gf.normalise_url(l["url"]) not in known]
+        print(json.dumps(page, ensure_ascii=False))
+
+
+def cmd_pool(args, p: gf.Paths) -> None:
+    """Checked products from earlier runs that are not a card yet."""
+    settings = gf.load_settings(p)
+    for e in gf.pool_candidates(p, settings):
+        print(json.dumps({k: e[k] for k in ("url", "title", "shop", "price", "tier", "in_stock", "age_days", "fresh")},
+                         ensure_ascii=False))
 
 
 def cmd_deck(args, p: gf.Paths) -> None:
@@ -163,6 +214,22 @@ def main(argv: list[str] | None = None) -> None:
 
     st = sub.add_parser("status", help="what the next /scout should find")
     st.add_argument("--urls", action="store_true", help="also list product URLs already found")
+    st.add_argument("--next-deck", action="store_true", help="count for the deck after the one on screen now")
+
+    ch = sub.add_parser("check", help="read product pages in parallel: title, price, stock, image, tier")
+    ch.add_argument("urls", nargs="*")
+    ch.add_argument("--file", help="a file with one URL per line")
+    ch.add_argument("--workers", type=int, default=scout.WORKERS, help="shops read at the same time")
+    ch.add_argument("--delay", type=float, default=scout.PER_HOST_DELAY, help="seconds between pages of one shop")
+
+    li = sub.add_parser("links", help="list product links on shop search pages, categories or gift guides")
+    li.add_argument("urls", nargs="*")
+    li.add_argument("--file", help="a file with one URL per line")
+    li.add_argument("--any-shop", action="store_true", help="for gift guides: keep links to other sites")
+    li.add_argument("--limit", type=int, default=30, help="links per page")
+    li.add_argument("--delay", type=float, default=scout.PER_HOST_DELAY)
+
+    sub.add_parser("pool", help="checked products from earlier runs that are not a card yet")
 
     sub.add_parser("deck", help="preview today's deck")
 

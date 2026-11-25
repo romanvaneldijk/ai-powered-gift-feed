@@ -71,6 +71,7 @@ me/
 ├── profile.md      your taste profile (written by /setup and /learn)
 ├── sources.md      your favourite sites and Instagram gift guides
 ├── feed/           one JSON file per gift idea
+├── pool.json       checked products waiting for a later deck
 ├── swipes.jsonl    every swipe
 └── wishlist.md     your wishlist, grouped by tier
 ```
@@ -80,16 +81,24 @@ me/
 
 ## Usage and cost
 
-There is no extra cost beyond your Claude plan. The web search and page reading in `/scout` are the
-heavy part. Based on a rough estimate (not yet measured), a daily `/scout` for 15 cards uses about
-10 to 25% of one 5-hour Pro usage window. To keep it low, `/scout` reads each page once, hands page
-reading to a cheaper subagent, and stops as soon as the deck is full. Check your own numbers with
-`/usage` in Claude Code.
+There is no extra cost beyond your Claude plan. Web search and page reading in `/scout` are the
+heavy part, so `/scout` keeps them small and fast:
+
+- **A script reads the shop pages, not Claude.** `python3 app/cli.py check` reads product pages in
+  parallel and pulls the title, price, stock and photo from the data shops publish for search
+  engines (schema.org JSON-LD, OpenGraph tags). Claude only reads a page itself when a shop blocks
+  scripts. Each shop still gets one page at a time with a pause in between, and robots.txt is honoured.
+- **Batched searches.** All searches of a round go out at once, with at most two rounds per run.
+- **Nothing is read twice.** Checked products that did not make today's deck wait in `me/pool.json`
+  for the next run, and shop search pages that work are remembered in `me/sources.md`.
+- **Scouting while you play.** `/feed` finds the next deck while you swipe, so you rarely wait for `/scout`.
+
+Check your own numbers with `/usage` in Claude Code.
 
 ## Good to know
 
-- **Instagram** often blocks automated page reads. When that happens, `/scout` asks you to paste
-  the caption or drop in a screenshot of the post instead.
+- **Instagram** often blocks automated page reads. When that happens, `/scout` carries on with your
+  other sources and asks you to paste the caption or drop in a screenshot of the post next time.
 - **Shops:** Claude reads single product pages at a human pace for your personal use and always
   links to the shop. Respect each site's terms.
 - **Prices and stock** change over time. `/wishlist check` finds links that no longer work.
@@ -98,6 +107,7 @@ reading to a cheaper subagent, and stops as soon as the deck is full. Check your
 
 - `app/giftfeed.py`: core logic (tiers, cards, deck, swipes, stats). Python standard library only.
 - `app/cli.py`: helper commands the slash commands call (`python3 app/cli.py -h`).
+- `app/scout.py`: the fast page reader behind `cli.py check` and `cli.py links`.
 - `app/feed.py` and `app/static/index.html`: the local gift notebook page.
 - `.claude/commands/`: the slash commands. Edit these to change how Claude behaves.
 - Tests: `python3 -m unittest discover tests`

@@ -57,6 +57,10 @@ class Paths:
     def state(self) -> Path:
         return self.me / "state.json"
 
+    @property
+    def pool(self) -> Path:
+        return self.me / "pool.json"
+
 
 def paths(me: str | Path | None = None) -> Paths:
     me = Path(me or os.environ.get("GIFTFEED_ME") or ROOT / "me")
@@ -170,9 +174,14 @@ def save_card(p: Paths, card: dict) -> None:
 
 
 def add_card(p: Paths, raw: dict, settings: dict) -> dict:
-    """Validate a card found by /scout and store it. Raises ValueError on bad input."""
+    """Validate a card found by /scout and store it. Raises ValueError on bad input.
+
+    A card may give only its url (plus tags, reason, kind and source) when `cli.py check` read
+    that page recently: title, shop, price and image then come from the checked page.
+    """
     if raw.get("type") == "question":
         return add_question(p, raw)
+    raw = fill_from_pool(p, raw)
     missing = [f for f in REQUIRED_CARD_FIELDS if raw.get(f) in (None, "")]
     if missing:
         raise ValueError(f"card is missing {', '.join(missing)}")
@@ -210,6 +219,97 @@ def add_card(p: Paths, raw: dict, settings: dict) -> dict:
     }
     save_card(p, card)
     return card
+
+
+# ---------------------------------------------------------------- pool of checked products
+
+# Facts from a checked page are trusted this long; older ones must be checked again.
+POOL_FRESH_DAYS = 3
+# Unused checked products are kept this long, so the next /scout can start from them.
+POOL_KEEP_DAYS = 14
+
+
+def load_pool(p: Paths) -> dict[str, dict]:
+    return read_json(p.pool, {})
+
+
+def _age_days(iso: str) -> float:
+    try:
+        then = datetime.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return 1e9
+    return (datetime.now(timezone.utc) - then).total_seconds() / 86400
+
+
+def save_checked(p: Paths, results: list[dict], settings: dict) -> list[dict]:
+    """Store checked product pages in the pool and annotate each result with its tier,
+    whether it is already a card, and whether it can be used as it is."""
+    pool = load_pool(p)
+    known = {normalise_url(c["url"]) for c in load_cards(p) if c.get("url")}
+    for r in results:
+        key = normalise_url(r.get("final_url") or r["url"])
+        r["known"] = key in known or normalise_url(r["url"]) in known
+        if r.get("status") != "ok":
+            pool.pop(key, None)
+            continue
+        currency = r.get("currency") or "EUR"
+        if currency != "EUR":
+            r["status"], r["note"] = "not-eur", f"price is in {currency}"
+            pool.pop(key, None)
+            continue
+        r["tier"] = tier_for_price(r["price"], settings)
+        if r["tier"] is None:
+            r["note"] = "price is outside your tiers"
+        if r.get("in_stock") is None:
+            r["note"] = "stock unknown: confirm on the page before using it"
+        pool[key] = {
+            "url": r.get("final_url") or r["url"],
+            "title": r["title"],
+            "shop": r.get("shop"),
+            "price": r["price"],
+            "image": r.get("image"),
+            "in_stock": r.get("in_stock"),
+            "checked_at": now_iso(),
+        }
+    pool = {k: v for k, v in pool.items() if _age_days(v["checked_at"]) <= POOL_KEEP_DAYS and k not in known}
+    write_json(p.pool, pool)
+    return results
+
+
+def pool_candidates(p: Paths, settings: dict) -> list[dict]:
+    """Checked products that are not a card yet, freshest first, with tier and age."""
+    known = {normalise_url(c["url"]) for c in load_cards(p) if c.get("url")}
+    out = []
+    for key, e in load_pool(p).items():
+        if key in known or _age_days(e["checked_at"]) > POOL_KEEP_DAYS:
+            continue
+        tier = tier_for_price(e["price"], settings)
+        if tier is None:
+            continue
+        age = _age_days(e["checked_at"])
+        out.append(e | {"tier": tier, "age_days": round(age, 1), "fresh": age <= POOL_FRESH_DAYS})
+    return sorted(out, key=lambda e: e["age_days"])
+
+
+def fill_from_pool(p: Paths, raw: dict) -> dict:
+    """Fill a card's title, shop, price and image from a recently checked page."""
+    if not raw.get("url"):
+        return raw
+    entry = load_pool(p).get(normalise_url(str(raw["url"])))
+    needs = [f for f in ("title", "shop", "price", "image") if raw.get(f) in (None, "")]
+    if not entry or not needs:
+        return raw
+    if _age_days(entry["checked_at"]) > POOL_FRESH_DAYS:
+        raise ValueError("this page was checked too long ago: run `cli.py check` on it again")
+    if entry.get("in_stock") is False:
+        raise ValueError("the checked page says this product is out of stock")
+    if entry.get("in_stock") is None and raw.get("in_stock") is not True:
+        raise ValueError('stock is unknown: confirm it on the page, then add "in_stock": true')
+    filled = dict(raw)
+    for f in needs:
+        filled[f] = entry.get(f)
+    filled["url"] = entry["url"]
+    return filled
 
 
 def add_question(p: Paths, raw: dict) -> dict:
