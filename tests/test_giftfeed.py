@@ -129,6 +129,17 @@ class SwipeTests(Base):
         self.assertFalse(gf.comes_back_today(saved, date.fromordinal(tomorrow)))
         self.assertNotIn("Gift 1", self.p.wishlist.read_text())
 
+    def test_already_own_it(self):
+        c = gf.add_card(self.p, card(1, 10, tags=["board-games"]), SETTINGS)
+        gf.record_swipe(self.p, c["id"], "owned")
+        cards = gf.load_cards(self.p)
+        self.assertEqual(cards[0]["status"], "owned")
+        self.assertEqual(gf.build_deck(SETTINGS, cards), [])  # never shown again
+        self.assertNotIn("Gift 1", self.p.wishlist.read_text())  # not on the wishlist
+        stats = gf.taste_stats(gf.load_swipes(self.p))
+        self.assertEqual(stats["likes"], [("board-games", 0.7)])
+        self.assertEqual(stats["already_owned"], ["Gift 1"])
+
     def test_question_answer(self):
         q = gf.add_card(self.p, {"type": "question", "question": "Tea?", "options": ["Yes", "No"]}, SETTINGS)
         gf.record_swipe(self.p, q["id"], "answer", "Yes")

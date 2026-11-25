@@ -44,7 +44,7 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
 | `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
-| `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it), then `/learn`. |
+| `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it, ↑ already own it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
 | `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
 
@@ -55,7 +55,8 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
   what your wishlist still needs, so it is never all expensive items.
 - **Your choices become taste.** Each gift has tags such as `coffee`, `hiking` or `handmade`.
   "Put it on the list" pushes its tags up and "Don't like it" pushes them down. "Kinda, maybe later"
-  counts a little in favour and brings the gift back on another day, at most twice. `/learn` writes the result into
+  counts a little in favour and brings the gift back on another day, at most twice. "Already own it"
+  never shows the gift again, but counts in favour of its tags, because you once picked it yourself. `/learn` writes the result into
   `me/profile.md` as plain text you can read and edit.
 - **It keeps exploring.** About 20% of each deck explores topics you haven't seen yet, and 10% is a
   wildcard, so your feed doesn't shrink to one hobby.
