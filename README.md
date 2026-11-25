@@ -1,19 +1,20 @@
 # 🎁 AI-powered gift feed
 
-**A daily swipe game that builds your personal birthday or Christmas wishlist, powered by Claude Code.**
+**A daily gift notebook that builds your personal birthday or Christmas wishlist, powered by Claude Code.**
 
 Every day Claude scouts fresh gift ideas from the web, your favourite shops and Instagram gift guides.
-You swipe them in your browser for a couple of minutes: right to add to your wishlist, left for
-"not for me". Every swipe teaches it your taste, so tomorrow's ideas fit better. It works like
+You flip through them in a notebook in your browser for a couple of minutes: add one to your wishlist,
+or cross it out. Every swipe teaches it your taste, so tomorrow's ideas fit better. It works like
 [lootjestrekken.nl](https://www.lootjestrekken.nl/), but keeps getting more personal.
 
 Everything runs on your own machine. Your profile and wishlist stay in plain files on your computer.
 
-<p>
-  <img src="docs/swipe-card.png" width="260" alt="A gift card in the swipe game">
-  &nbsp;
-  <img src="docs/done-screen.png" width="260" alt="The end-of-day screen with wishlist progress and taste profile">
-</p>
+![Today's gift idea, sketched in the notebook, next to your wishlist](docs/notebook-idea.png)
+
+The feed is a notebook on your laptop screen. The left page sketches today's gift ideas one at a time,
+and the right page is your wishlist, filling up as you go. Hover over a sketch to see the real photo.
+
+![The end of the day: your taste so far and your wishlist per price tier](docs/notebook-done.png)
 
 ## Quick start
 
@@ -30,9 +31,9 @@ Then, inside Claude Code:
 
 1. `/setup` plays the 2-minute onboarding quiz: your hobbies, style, no-gos, and your own price ranges.
 2. `/scout` finds your first deck of gift ideas.
-3. `/feed` opens the swipe game in your browser. When you finish, Claude updates your profile.
+3. `/feed` opens your gift notebook in the browser. When you finish, Claude updates your profile.
 
-Repeat `/scout` and `/feed` each day. Want to try the swipe page first? Run
+Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 `python3 app/feed.py --demo` for a demo deck. Nothing gets saved.
 
 ## Commands
@@ -43,7 +44,7 @@ Repeat `/scout` and `/feed` each day. Want to try the swipe page first? Run
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
 | `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
-| `/feed` | Today's swipe game in your browser (→ wishlist, ← not for me, ↑ love it), then `/learn`. |
+| `/feed` | Today's gift notebook in your browser (→ on my list, ← not for me, ↑ love it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
 | `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
 
@@ -96,7 +97,7 @@ reading to a cheaper subagent, and stops as soon as the deck is full. Check your
 
 - `app/giftfeed.py`: core logic (tiers, cards, deck, swipes, stats). Python standard library only.
 - `app/cli.py`: helper commands the slash commands call (`python3 app/cli.py -h`).
-- `app/feed.py` and `app/static/index.html`: the local swipe page.
+- `app/feed.py` and `app/static/index.html`: the local gift notebook page.
 - `.claude/commands/`: the slash commands. Edit these to change how Claude behaves.
 - Tests: `python3 -m unittest discover tests`
 

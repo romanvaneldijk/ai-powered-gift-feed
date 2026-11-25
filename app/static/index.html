@@ -3,225 +3,421 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gift feed</title>
+<title>Gift notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Patrick+Hand&display=swap">
 <style>
   :root {
-    --bg: #f6f3ee; --card: #ffffff; --ink: #1f1d1a; --muted: #6f6a62; --line: #e4ded4;
-    --like: #2f8f5b; --nope: #c2493d; --love: #c0841a; --accent: #3d5afe;
-    --big: #7b4dd6; --medium: #2b7bbf; --small: #2f8f5b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #171614; --card: #23211e; --ink: #f1ede6; --muted: #a29b90; --line: #36332e; }
+    --desk: #c9b79c; --desk-dark: #b29f83;
+    --paper: #fbf7ec; --paper-edge: #efe7d3;
+    --rule: #cfdbe6; --margin: #e5a3a0;
+    --ink: #2b2a33; --pencil: #5d5a62; --faint: #8f8a84;
+    --red: #c8423a; --green: #2f7d4f; --gold: #c58a12; --blue: #2f5fa8;
+    --highlight: rgba(255, 223, 87, .55);
+    --tape: rgba(236, 224, 180, .78);
+    --line: 32px;
+    --hand: "Caveat", "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+    --print: "Patrick Hand", "Segoe Print", "Comic Sans MS", cursive;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { background: var(--bg); color: var(--ink); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-         display: flex; flex-direction: column; align-items: center; overflow: hidden; }
-  header { width: 100%; max-width: 440px; padding: 16px 16px 8px; display: flex; justify-content: space-between; align-items: center; }
-  header h1 { font-size: 18px; margin: 0; }
-  .meta { color: var(--muted); font-size: 14px; }
-  .progress { width: calc(100% - 32px); max-width: 408px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
-  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .25s; }
-  main { position: relative; width: 100%; max-width: 440px; flex: 1; padding: 16px; min-height: 0; }
-  .card { position: absolute; inset: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
-          box-shadow: 0 8px 24px rgba(0,0,0,.08); overflow: hidden; display: flex; flex-direction: column;
-          touch-action: none; user-select: none; transition: transform .3s ease, opacity .3s ease; }
-  .card.dragging { transition: none; }
-  .img { flex: 1; min-height: 0; background: var(--line) center / contain no-repeat; display: flex; align-items: center; justify-content: center; font-size: 64px; }
-  .img.has-img { background-color: #fff; }
-  .body { padding: 14px 16px 16px; }
-  .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
-  .title { font-weight: 650; font-size: 18px; margin: 4px 0 2px; }
-  .shop { color: var(--muted); font-size: 14px; }
-  .price { font-weight: 700; font-size: 18px; white-space: nowrap; }
-  .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: #fff; text-transform: uppercase; letter-spacing: .04em; }
-  .badge.big { background: var(--big); } .badge.medium { background: var(--medium); } .badge.small { background: var(--small); }
-  .reason { font-size: 14px; color: var(--muted); margin-top: 8px; }
-  .links { font-size: 13px; margin-top: 8px; display: flex; gap: 12px; }
-  .links a { color: var(--accent); }
-  .stamp { position: absolute; top: 24px; padding: 4px 12px; border: 3px solid; border-radius: 8px; font-weight: 800; font-size: 24px; opacity: 0; transform: rotate(-12deg); }
-  .stamp.like { left: 20px; color: var(--like); } .stamp.nope { right: 20px; color: var(--nope); transform: rotate(12deg); }
-  .stamp.love { left: 50%; translate: -50% 0; color: var(--love); transform: none; }
-  .question { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px; gap: 12px; }
-  .question h2 { margin: 0 0 8px; font-size: 22px; }
-  .question .kicker { color: var(--muted); font-size: 14px; }
-  .opt { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 16px; cursor: pointer; }
-  .opt:hover { border-color: var(--accent); }
-  footer { display: flex; gap: 20px; padding: 8px 16px 24px; }
-  footer button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-size: 26px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-  footer button:active { transform: scale(.94); }
-  #nope { color: var(--nope); } #love { color: var(--love); width: 52px; height: 52px; align-self: center; font-size: 22px; } #like { color: var(--like); }
-  .hint { color: var(--muted); font-size: 12px; text-align: center; padding-bottom: 8px; }
-  .done { position: absolute; inset: 16px; display: flex; flex-direction: column; gap: 16px; justify-content: center; text-align: center; }
-  .done h2 { font-size: 26px; margin: 0; }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; text-align: left; }
-  .panel h3 { margin: 0 0 10px; font-size: 15px; }
-  .bar { display: grid; grid-template-columns: 70px 1fr 48px; gap: 8px; align-items: center; font-size: 14px; margin: 6px 0; }
-  .bar .track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
-  .bar .fill { height: 100%; background: var(--accent); }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18), transparent 60%),
+      repeating-linear-gradient(92deg, var(--desk) 0 38px, var(--desk-dark) 38px 40px, var(--desk) 40px 90px);
+    color: var(--ink); font-family: var(--print); font-size: 20px;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+
+  /* ---------- the notebook spread ---------- */
+  .notebook {
+    position: relative; display: grid; grid-template-columns: 1fr 1fr;
+    width: min(1180px, 100%); height: min(760px, calc(100vh - 48px)); min-height: 600px;
+    filter: drop-shadow(0 18px 30px rgba(60, 40, 20, .35));
+  }
+  .page {
+    position: relative; overflow: hidden; padding: 56px 48px 40px 72px;
+    background:
+      linear-gradient(90deg, transparent 56px, var(--margin) 56px 58px, transparent 58px),
+      repeating-linear-gradient(180deg, transparent 0 calc(var(--line) - 1px), var(--rule) calc(var(--line) - 1px) var(--line)),
+      var(--paper);
+    background-position: 0 0, 0 24px, 0 0;
+  }
+  .page.left { border-radius: 14px 4px 4px 14px; box-shadow: inset -24px 0 30px -24px rgba(0,0,0,.25); }
+  .page.right { border-radius: 4px 14px 14px 4px; box-shadow: inset 24px 0 30px -24px rgba(0,0,0,.25); }
+  .rings {
+    position: absolute; left: 50%; top: 28px; bottom: 28px; width: 34px; translate: -50% 0; z-index: 3; pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, transparent 5px, #8d8a86 5px 7px, transparent 7.5px) 0 0 / 34px 38px repeat-y;
+  }
+  .rings::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 4px, #a9a6a1 4px 6px, #e8e6e1 6px 9px, #a9a6a1 9px 11px, transparent 11px 23px,
+                                #a9a6a1 23px 25px, #e8e6e1 25px 28px, #a9a6a1 28px 30px, transparent 30px) 0 9px / 34px 38px repeat-y;
+    -webkit-mask: linear-gradient(#000 0 10px, transparent 10px) 0 0 / 34px 38px repeat-y;
+            mask: linear-gradient(#000 0 10px, transparent 10px) 0 0 / 34px 38px repeat-y;
+  }
+
+  .page-head { display: flex; justify-content: space-between; align-items: baseline; height: var(--line); margin-bottom: var(--line); }
+  .page-head h1, .page-head h2 { font-family: var(--hand); font-weight: 700; font-size: 38px; margin: 0; line-height: 1; }
+  .page-head .date { font-family: var(--hand); font-size: 24px; color: var(--pencil); }
+  .scribble-underline { position: relative; display: inline-block; }
+  .scribble-underline svg { position: absolute; left: -4px; right: -4px; bottom: -10px; width: calc(100% + 8px); height: 14px; }
+
+  /* ---------- left page: the gift sketch ---------- */
+  #idea { position: relative; height: calc(100% - 2 * var(--line)); display: flex; flex-direction: column; }
+  .idea-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; flex: 1; min-height: 0; }
+  .sketch {
+    position: relative; align-self: start; margin-top: 8px; aspect-ratio: 1 / 1; max-height: 100%;
+    rotate: -1.6deg; background: #fffdf6; padding: 14px;
+  }
+  .sketch .frame { position: absolute; inset: 0; pointer-events: none; }
+  .sketch .photo {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+    filter: url(#pencil) contrast(1.15);
+    mix-blend-mode: multiply; transition: filter .35s;
+  }
+  .sketch:hover .photo { filter: none; }
+  .sketch .doodle { width: 100%; height: 100%; }
+  .tape { position: absolute; width: 92px; height: 26px; background: var(--tape); box-shadow: 0 1px 2px rgba(0,0,0,.08); z-index: 2; }
+  .tape.a { top: -11px; left: -22px; rotate: -32deg; }
+  .tape.b { bottom: -10px; right: -24px; rotate: -28deg; }
+  .hover-hint { position: absolute; bottom: -34px; left: 10px; font-family: var(--hand); font-size: 20px; color: var(--faint); rotate: 1deg; }
+
+  .notes { display: flex; flex-direction: column; min-width: 0; }
+  .tier-tab {
+    align-self: flex-start; font-family: var(--hand); font-size: 22px; font-weight: 700; padding: 0 12px; height: 30px; line-height: 30px;
+    rotate: 2deg; background: #fff2a8; box-shadow: 1px 2px 0 rgba(0,0,0,.08);
+  }
+  .tier-tab.big { background: #e9d6ff; } .tier-tab.medium { background: #cfe6ff; } .tier-tab.small { background: #d8f2c8; }
+  .gift-title { font-family: var(--hand); font-weight: 700; font-size: 44px; line-height: 1.05; margin: 18px 0 6px; overflow-wrap: anywhere; }
+  .shop { color: var(--pencil); font-size: 20px; line-height: var(--line); }
+  .price { position: relative; display: inline-block; font-family: var(--hand); font-weight: 700; font-size: 40px; padding: 4px 16px; margin: 8px 0 4px -6px; align-self: flex-start; }
+  .price svg { position: absolute; inset: -6px -10px; width: calc(100% + 20px); height: calc(100% + 12px); overflow: visible; }
+  .why { position: relative; font-family: var(--hand); font-size: 26px; color: var(--blue); line-height: 1.15; margin-top: 14px; padding-left: 4px; }
+  .why b { font-weight: 700; }
+  .why .arrow { position: absolute; left: -70px; top: -6px; width: 66px; height: 46px; overflow: visible; }
+  .shop-link { font-family: var(--hand); font-size: 24px; color: var(--ink); margin-top: 14px; text-decoration: none; border-bottom: 2px dashed var(--faint); align-self: flex-start; }
+  .shop-link:hover { color: var(--blue); border-color: var(--blue); }
+  .found-via { font-size: 16px; color: var(--faint); margin-top: 6px; }
+  .found-via a { color: var(--faint); }
+
+  .actions { display: flex; gap: 18px; align-items: center; justify-content: center; padding-top: 18px; }
+  .btn {
+    position: relative; border: 0; background: transparent; cursor: pointer; font-family: var(--hand); font-weight: 700; font-size: 28px;
+    padding: 6px 22px 8px; color: var(--ink); transition: transform .12s; white-space: nowrap;
+  }
+  .btn svg.box { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .btn:hover { transform: rotate(-2deg) scale(1.05); }
+  .btn:active { transform: scale(.95); }
+  .btn.nope { color: var(--red); } .btn.love { color: var(--gold); } .btn.like { color: var(--green); }
+  .keys { text-align: center; font-size: 15px; color: var(--faint); margin-top: 6px; }
+  kbd { font-family: var(--print); border: 1px solid var(--faint); border-radius: 4px; padding: 0 5px; }
+
+  .cross { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  .cross path { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: draw .35s ease-out forwards; }
+  .stamp-text {
+    position: absolute; top: 34%; left: 50%; translate: -50% -50%; rotate: -10deg; z-index: 6; pointer-events: none;
+    font-family: var(--hand); font-weight: 700; font-size: 64px; padding: 0 18px; border: 4px solid; border-radius: 10px; opacity: 0;
+    animation: stamp .35s ease-out forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes stamp { from { opacity: 0; scale: 1.6; } to { opacity: .9; scale: 1; } }
+  .turn-out { animation: turn .38s ease-in forwards; transform-origin: left center; }
+  @keyframes turn { to { opacity: 0; transform: perspective(1200px) rotateY(-28deg) translateX(-30px); } }
+  .turn-in { animation: turnin .35s ease-out; }
+  @keyframes turnin { from { opacity: 0; transform: translateX(20px); } }
+
+  /* question page */
+  .question { padding-top: 24px; }
+  .question .kicker { font-family: var(--hand); font-size: 28px; color: var(--blue); rotate: -2deg; display: inline-block; }
+  .question h3 { font-family: var(--hand); font-size: 56px; margin: 12px 0 28px; line-height: 1.05; }
+  .options { display: flex; flex-wrap: wrap; gap: 18px 34px; }
+  .opt { position: relative; font-family: var(--hand); font-size: 38px; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 4px 18px; }
+  .opt svg { position: absolute; inset: -4px -8px; width: calc(100% + 16px); height: calc(100% + 8px); overflow: visible; opacity: 0; }
+  .opt:hover svg { opacity: .45; }
+  .opt.chosen svg { opacity: 1; }
+  .opt.chosen svg path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: draw .4s forwards; }
+
+  /* ---------- right page: the wishlist ---------- */
+  .tier { margin-bottom: var(--line); }
+  .tier h3 {
+    font-family: var(--hand); font-size: 30px; font-weight: 700; margin: 0; height: var(--line); line-height: var(--line);
+    display: flex; justify-content: space-between;
+  }
+  .tier h3 .count { font-size: 24px; color: var(--pencil); font-weight: 500; }
+  .tier h3 .range { font-size: 20px; color: var(--faint); font-weight: 500; margin-left: 10px; }
+  .tier ul { list-style: none; margin: 0; padding: 0; }
+  .tier li {
+    display: flex; align-items: center; gap: 10px; height: var(--line); line-height: var(--line); white-space: nowrap;
+    font-size: 21px;
+  }
+  .tier li .box { flex: none; width: 18px; height: 18px; }
+  .tier li .name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tier li .name a { color: inherit; text-decoration: none; }
+  .tier li .name a:hover { text-decoration: underline wavy var(--faint); }
+  .tier li .p { margin-left: auto; color: var(--pencil); font-family: var(--hand); font-size: 24px; flex: none; }
+  .tier li .star { color: var(--gold); flex: none; font-size: 18px; }
+  .tier li.empty { color: var(--faint); font-family: var(--hand); font-size: 22px; }
+  .tier li.fresh .name { background: linear-gradient(100deg, transparent 0%, var(--highlight) 2%, var(--highlight) 96%, transparent 100%) no-repeat 0 60% / 0% 70%; animation: hl .7s .1s ease-out forwards; }
+  @keyframes hl { to { background-size: 100% 70%; } }
+  .tier li.more { color: var(--faint); font-size: 18px; }
+
+  .footer-note {
+    position: absolute; left: 72px; right: 48px; bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end;
+    font-family: var(--hand); font-size: 24px; color: var(--pencil);
+  }
+  .progress { display: flex; align-items: center; gap: 10px; }
+  .progress svg { width: 180px; height: 16px; overflow: visible; }
+
+  /* done page */
+  .done h3 { font-family: var(--hand); font-size: 54px; margin: 8px 0 4px; }
+  .done p { font-family: var(--hand); font-size: 26px; color: var(--pencil); margin: 0 0 var(--line); }
+  .taste-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 12px; height: var(--line); font-size: 21px; }
+  .taste-row svg { width: 100%; height: 18px; overflow: visible; }
+  .taste-row .pct { font-family: var(--hand); font-size: 22px; color: var(--pencil); }
+
   .hidden { display: none !important; }
+
+  @media (max-width: 900px) {
+    body { padding: 12px; align-items: flex-start; }
+    .notebook { grid-template-columns: 1fr; height: auto; }
+    .rings { display: none; }
+    .page.left, .page.right { border-radius: 12px; min-height: 640px; }
+    .page.right { margin-top: 12px; }
+    .idea-body { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>🎁 Today's gifts</h1>
-  <span class="meta" id="meta"></span>
-</header>
-<div class="progress"><div id="bar"></div></div>
-<main id="stage"></main>
-<div class="hint" id="hint">Drag the card, or use ← not for me · ↑ love it · → add to wishlist</div>
-<footer id="buttons">
-  <button id="nope" title="Not for me (←)">✕</button>
-  <button id="love" title="Love it (↑)">★</button>
-  <button id="like" title="Add to wishlist (→)">♥</button>
-</footer>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2"/>
+    </filter>
+    <!-- turns a product photo into a pencil sketch: outlines from edge detection, plus a faint grey wash -->
+    <filter id="pencil" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="0" result="grey"/>
+      <feConvolveMatrix in="grey" order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="edges"/>
+      <feComponentTransfer in="edges" result="lines">
+        <feFuncR type="linear" slope="-3.2" intercept="1"/><feFuncG type="linear" slope="-3.2" intercept="1"/><feFuncB type="linear" slope="-3.2" intercept="1"/>
+      </feComponentTransfer>
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -0.9 0.55" result="paper"/>
+      <feComponentTransfer in="grey" result="wash">
+        <feFuncR type="linear" slope="0.45" intercept="0.58"/><feFuncG type="linear" slope="0.45" intercept="0.58"/><feFuncB type="linear" slope="0.45" intercept="0.58"/>
+      </feComponentTransfer>
+      <feBlend in="lines" in2="wash" mode="multiply" result="sketch"/>
+      <feBlend in="paper" in2="sketch" mode="screen"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="notebook">
+  <section class="page left">
+    <div class="page-head">
+      <h1 class="scribble-underline" id="leftTitle">Gift ideas</h1>
+      <span class="date" id="today"></span>
+    </div>
+    <div id="idea"></div>
+  </section>
+  <div class="rings"></div>
+  <section class="page right">
+    <div class="page-head">
+      <h2 class="scribble-underline">My wishlist</h2>
+      <span class="date" id="occasion"></span>
+    </div>
+    <div id="wishlist"></div>
+    <div class="footer-note">
+      <span id="streak"></span>
+      <span class="progress" id="progress"></span>
+    </div>
+  </section>
+</div>
 
 <script>
-const stage = document.getElementById('stage');
-let deck = [], index = 0, total = 0, busy = false;
+const $ = s => document.querySelector(s);
+let deck = [], index = 0, busy = false, summary = null, lastAdded = null;
 
-const euro = n => '€' + Number(n).toFixed(2).replace('.', ',');
+/* ---------- little hand-drawn helpers (deterministic wobble per seed) ---------- */
+function rng(seed) { let s = 0; for (const ch of String(seed)) s = (s * 31 + ch.charCodeAt(0)) >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function wobblyRect(w, h, seed, j = 3) {
+  const r = rng(seed), J = () => (r() - .5) * 2 * j;
+  const p = [[2 + J(), 2 + J()], [w - 2 + J(), 2 + J()], [w - 2 + J(), h - 2 + J()], [2 + J(), h - 2 + J()]];
+  let d = `M${p[0][0]},${p[0][1]}`;
+  for (let i = 1; i <= 4; i++) { const a = p[i - 1], b = p[i % 4]; d += ` Q${(a[0] + b[0]) / 2 + J()},${(a[1] + b[1]) / 2 + J()} ${b[0]},${b[1]}`; }
+  // a second, slightly offset pass makes it look sketched
+  const q = p.map(([x, y]) => [x + J() * .6, y + J() * .6]);
+  d += ` M${q[0][0] + 6},${q[0][1]}`; for (let i = 1; i <= 4; i++) d += ` L${q[i % 4][0]},${q[i % 4][1]}`;
+  return d;
+}
+function ellipse(w, h, seed) {
+  const r = rng(seed), cx = w / 2, cy = h / 2; let d = '';
+  for (let t = 0; t <= Math.PI * 2.15; t += .25) {
+    const rx = cx * (1 + (r() - .5) * .06), ry = cy * (1 + (r() - .5) * .1);
+    const x = cx + rx * Math.cos(t - .4), y = cy + ry * Math.sin(t - .4);
+    d += (d ? ' L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
+  }
+  return d;
+}
+const svgBox = (w, h, seed, color, width = 2) =>
+  `<svg class="box" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${wobblyRect(w, h, seed)}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" filter="url(#rough)"/></svg>`;
+const underline = seed => { const r = rng(seed); return `<svg viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M2,${8 + r() * 3} C50,${2 + r() * 4} 120,${11 + r() * 3} 198,${4 + r() * 4}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg>`; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
+const euro = n => '€' + (Number(n) % 1 ? Number(n).toFixed(2).replace('.', ',') : Number(n).toFixed(0));
+const TIER_NAMES = { big: 'Big wishes', medium: 'Medium gifts', small: 'Small gifts' };
+const TIER_TAB = { big: 'a big wish', medium: 'medium gift', small: 'small gift' };
 
-async function api(path, body) {
-  const r = await fetch(path, body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {});
-  return r.json();
-}
+const giftDoodle = `
+<svg class="doodle" viewBox="0 0 200 200" fill="none" stroke="var(--pencil)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#rough)">
+  <path d="M40 92 L160 92 L156 170 L44 170 Z"/><path d="M32 70 L168 70 L168 94 L32 94 Z"/>
+  <path d="M100 70 L100 170"/><path d="M86 70 L86 170" opacity=".35"/>
+  <path d="M100 68 C80 40 52 46 62 62 C68 72 88 70 100 68 Z"/><path d="M100 68 C120 40 148 46 138 62 C132 72 112 70 100 68 Z"/>
+  <path d="M52 110 L70 128 M52 130 L84 160 M120 110 L150 140 M128 150 L146 168" opacity=".35"/>
+</svg>`;
 
-function giftCard(c) {
-  const el = document.createElement('div');
-  el.className = 'card';
-  const img = c.image ? `style="background-image:url('${encodeURI(safeUrl(c.image))}')"` : '';
-  el.innerHTML = `
-    <div class="img ${c.image ? 'has-img' : ''}" ${img}>${c.image ? '' : '🎁'}</div>
-    <div class="body">
-      <div class="row"><span class="badge ${c.tier}">${c.tier}</span><span class="price">${euro(c.price)}</span></div>
-      <div class="title">${esc(c.title)}</div>
-      <div class="shop">${esc(c.shop)}</div>
-      ${c.reason ? `<div class="reason">${esc(c.reason)}</div>` : ''}
-      <div class="links"><a href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener">View in shop</a>
-        ${/^https?:/.test(c.source || '') ? `<a href="${esc(c.source)}" target="_blank" rel="noopener">Found via</a>` : ''}</div>
-    </div>
-    <div class="stamp like">WANT</div><div class="stamp nope">NOPE</div><div class="stamp love">LOVE</div>`;
-  addDrag(el);
-  return el;
-}
-
-function questionCard(c) {
-  const el = document.createElement('div');
-  el.className = 'card';
-  el.innerHTML = `<div class="question"><div class="kicker">Bonus question</div><h2>${esc(c.question)}</h2></div>`;
-  const box = el.querySelector('.question');
-  c.options.forEach(o => {
-    const b = document.createElement('button');
-    b.className = 'opt'; b.textContent = o;
-    b.onclick = () => answer(o);
-    box.appendChild(b);
-  });
-  return el;
-}
-
-function render() {
-  stage.innerHTML = '';
-  document.getElementById('bar').style.width = (100 * index / total) + '%';
+/* ---------- rendering ---------- */
+function renderIdea() {
+  const box = $('#idea');
   if (index >= deck.length) return finish();
   const c = deck[index];
-  const isQ = c.type === 'question';
-  document.getElementById('buttons').classList.toggle('hidden', isQ);
-  document.getElementById('hint').classList.toggle('hidden', isQ);
-  stage.appendChild(isQ ? questionCard(c) : giftCard(c));
+  $('#leftTitle').innerHTML = (c.type === 'question' ? 'Quick question' : `Gift idea ${giftNumber()}`) + underline('t' + index);
+  box.classList.remove('turn-out'); void box.offsetWidth; box.classList.add('turn-in');
+  if (c.type === 'question') return renderQuestion(c, box);
+  const img = c.image ? `<img class="photo" src="${esc(safeUrl(c.image))}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createRange().createContextualFragment(giftDoodle))">` : giftDoodle;
+  const via = /^https?:/.test(c.source || '') ? `<div class="found-via">found via <a href="${esc(c.source)}" target="_blank" rel="noopener">${esc(hostOf(c.source))}</a></div>` : '';
+  box.innerHTML = `
+    <div class="idea-body">
+      <div class="sketch">
+        <span class="tape a"></span><span class="tape b"></span>
+        ${img}
+        <svg class="frame" viewBox="0 0 300 300" preserveAspectRatio="none"><path d="${wobblyRect(300, 300, c.id, 4)}" fill="none" stroke="var(--pencil)" stroke-width="1.6" filter="url(#rough)"/></svg>
+        ${c.image ? '<span class="hover-hint">hover for colour</span>' : ''}
+      </div>
+      <div class="notes">
+        <span class="tier-tab ${c.tier}">${TIER_TAB[c.tier]}</span>
+        <div class="gift-title">${esc(c.title)}</div>
+        <div class="shop">from ${esc(c.shop)}</div>
+        <span class="price">${euro(c.price)}<svg viewBox="0 0 140 64" preserveAspectRatio="none"><path d="${ellipse(140, 64, c.id)}" fill="none" stroke="var(--red)" stroke-width="2.4" stroke-linecap="round" opacity=".8"/></svg></span>
+        ${c.reason ? `<div class="why"><svg class="arrow" viewBox="0 0 66 46"><path d="M4 40 C18 6 40 4 58 18 M58 18 L46 16 M58 18 L54 6" fill="none" stroke="var(--blue)" stroke-width="2.2" stroke-linecap="round"/></svg><b>why?</b> ${esc(c.reason)}</div>` : ''}
+        <a class="shop-link" href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener">see it in the shop &rarr;</a>
+        ${via}
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn nope" data-a="dismiss">${svgBox(190, 52, 'n' + index, 'var(--red)')}&#10007; not for me</button>
+      <button class="btn love" data-a="love">${svgBox(150, 52, 'l' + index, 'var(--gold)')}&#9733; love it</button>
+      <button class="btn like" data-a="like">${svgBox(200, 52, 'k' + index, 'var(--green)')}&#9829; on my list</button>
+    </div>
+    <div class="keys"><kbd>&larr;</kbd> not for me &nbsp; <kbd>&uarr;</kbd> love it &nbsp; <kbd>&rarr;</kbd> on my list</div>`;
+  box.querySelectorAll('.btn').forEach(b => b.onclick = () => act(b.dataset.a));
+  renderProgress();
 }
 
-function addDrag(el) {
-  let x0 = 0, y0 = 0, dx = 0, dy = 0, down = false;
-  const stamps = () => el.querySelectorAll('.stamp');
-  el.addEventListener('pointerdown', e => {
-    if (e.target.closest('a')) return;
-    down = true; x0 = e.clientX; y0 = e.clientY; el.classList.add('dragging'); el.setPointerCapture(e.pointerId);
+function renderQuestion(c, box) {
+  box.innerHTML = `<div class="question"><span class="kicker">bonus question, helps my next search &darr;</span>
+    <h3>${esc(c.question)}</h3><div class="options"></div></div>`;
+  const opts = box.querySelector('.options');
+  c.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `${esc(o)}<svg viewBox="0 0 160 60" preserveAspectRatio="none"><path d="${ellipse(160, 60, o + i)}" fill="none" stroke="var(--red)" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+    b.onclick = () => answer(o, b);
+    opts.appendChild(b);
   });
-  el.addEventListener('pointermove', e => {
-    if (!down) return;
-    dx = e.clientX - x0; dy = e.clientY - y0;
-    el.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 20}deg)`;
-    const [like, nope, love] = stamps();
-    like.style.opacity = Math.max(0, dx / 120);
-    nope.style.opacity = Math.max(0, -dx / 120);
-    love.style.opacity = Math.max(0, -dy / 120 - Math.abs(dx) / 240);
-  });
-  const end = () => {
-    if (!down) return;
-    down = false; el.classList.remove('dragging');
-    if (dx > 110) swipe('like');
-    else if (dx < -110) swipe('dismiss');
-    else if (dy < -120) swipe('love');
-    else { el.style.transform = ''; stamps().forEach(s => s.style.opacity = 0); }
-    dx = dy = 0;
-  };
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', end);
+  renderProgress();
 }
 
-async function swipe(action) {
+function renderWishlist() {
+  if (!summary) return;
+  const w = $('#wishlist');
+  w.innerHTML = ['big', 'medium', 'small'].map(t => {
+    const items = summary.items[t] || [], target = summary.wishlist[t].target;
+    const [lo, hi] = summary.tier_ranges[t];
+    const shown = items.slice(0, Math.max(target, 1) + 1);
+    const lis = shown.map((it, i) => `
+      <li class="${it.id === lastAdded ? 'fresh' : ''}">
+        <svg class="box" viewBox="0 0 18 18"><path d="${wobblyRect(18, 18, it.id, 1.2)}" fill="none" stroke="var(--pencil)" stroke-width="1.4"/>
+          <path d="M4 9 L8 13 L15 3" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span class="name"><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(it.title)}</a></span>
+        ${it.status === 'loved' ? '<span class="star">&#9733;</span>' : ''}
+        <span class="p">${euro(it.price)}</span></li>`).join('');
+    const empties = Math.max(0, target - items.length);
+    const blank = Array.from({length: Math.min(empties, 3)}, () =>
+      `<li class="empty"><svg class="box" viewBox="0 0 18 18"><path d="${wobblyRect(18, 18, t + Math.random(), 1.2)}" fill="none" stroke="var(--faint)" stroke-width="1.2"/></svg>&hellip;</li>`).join('');
+    const more = items.length > shown.length ? `<li class="more">+ ${items.length - shown.length} more in wishlist.md</li>` : '';
+    return `<div class="tier"><h3><span>${TIER_NAMES[t]}<span class="range">${euro(lo)}&ndash;${euro(hi)}</span></span><span class="count">${items.length} / ${target}</span></h3><ul>${lis}${more}${blank}</ul></div>`;
+  }).join('');
+  $('#streak').textContent = summary.streak ? `🔥 ${summary.streak} ${summary.streak === 1 ? 'day' : 'days'} in a row` : 'day one, here we go!';
+}
+
+function renderProgress() {
+  const gifts = deck.filter(c => c.type === 'gift').length || 1;
+  const done = Math.min(giftNumber() - 1, gifts), w = 180 * done / gifts;
+  $('#progress').innerHTML = `${done} of ${gifts} <svg viewBox="0 0 180 16"><path d="M2 8 L178 8" stroke="var(--rule)" stroke-width="6" stroke-linecap="round"/>
+    ${done ? `<path d="M2 8 Q${w / 2} 6 ${Math.max(w - 2, 3)} 9" fill="none" stroke="var(--pencil)" stroke-width="5" stroke-linecap="round"/>` : ''}</svg>`;
+}
+const giftNumber = () => index >= deck.length ? deck.filter(c => c.type === 'gift').length + 1 : deck.slice(0, index + 1).filter(c => c.type === 'gift').length;
+const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+
+/* ---------- actions ---------- */
+async function act(action) {
   if (busy || index >= deck.length || deck[index].type === 'question') return;
   busy = true;
-  const el = stage.querySelector('.card');
-  const out = {like: 'translate(140%, 0) rotate(20deg)', dismiss: 'translate(-140%, 0) rotate(-20deg)', love: 'translate(0, -140%)'}[action];
-  if (el) { el.style.transform = out; el.style.opacity = 0; }
-  const res = await api('/api/swipe', {id: deck[index].id, action});
-  if (res.error) alertBox(res.error);
-  updateMeta(res);
-  setTimeout(() => { index++; busy = false; render(); }, 250);
+  const card = deck[index], page = $('.page.left');
+  if (action === 'dismiss') {
+    page.insertAdjacentHTML('beforeend', `<svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M12 18 C40 46 62 66 88 86 M86 16 C60 40 38 62 14 88" fill="none" stroke="var(--red)" stroke-width="1.4" stroke-linecap="round" opacity=".75"/></svg>`);
+  } else {
+    page.insertAdjacentHTML('beforeend', `<div class="stamp-text" style="color:${action === 'love' ? 'var(--gold)' : 'var(--green)'}">${action === 'love' ? '&#9733; love it!' : 'on my list!'}</div>`);
+  }
+  const res = await fetch('/api/swipe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: card.id, action})}).then(r => r.json());
+  if (!res.error) { summary = res; if (action !== 'dismiss') lastAdded = card.id; renderWishlist(); }
+  setTimeout(() => $('#idea').classList.add('turn-out'), 260);
+  setTimeout(() => {
+    page.querySelectorAll('.cross, .stamp-text').forEach(e => e.remove());
+    index++; busy = false; renderIdea();
+  }, 620);
 }
 
-async function answer(option) {
+async function answer(option, btn) {
   if (busy) return;
-  busy = true;
-  await api('/api/swipe', {id: deck[index].id, action: 'answer', answer: option});
-  index++; busy = false; render();
+  busy = true; btn.classList.add('chosen');
+  await fetch('/api/swipe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: deck[index].id, action: 'answer', answer: option})});
+  setTimeout(() => { index++; busy = false; renderIdea(); }, 650);
 }
-
-function updateMeta(s) {
-  if (!s || !s.wishlist) return;
-  const w = s.wishlist;
-  document.getElementById('meta').textContent =
-    `🔥 ${s.streak || 0} · list ${w.big.have + w.medium.have + w.small.have}/${w.big.target + w.medium.target + w.small.target}`;
-}
-
-function alertBox(msg) { console.warn(msg); }
 
 async function finish() {
-  document.getElementById('buttons').classList.add('hidden');
-  document.getElementById('hint').classList.add('hidden');
-  const s = await api('/api/done', {});
-  updateMeta(s);
-  const bars = ['big', 'medium', 'small'].map(t => {
-    const {have, target} = s.wishlist[t];
-    const pct = target ? Math.min(100, 100 * have / target) : 100;
-    return `<div class="bar"><span>${t[0].toUpperCase() + t.slice(1)}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span>${have}/${target}</span></div>`;
-  }).join('');
-  const taste = s.taste.length
-    ? s.taste.map(([tag, pct]) => `<div class="bar"><span>${esc(tag)}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span>${pct}%</span></div>`).join('')
-    : '<div class="meta">Swipe a few more days to see your taste profile.</div>';
-  stage.innerHTML = `<div class="done">
-    <h2>Done for today 🎉</h2>
-    <div class="meta">🔥 ${s.streak}-day streak. New picks after the next /scout.</div>
-    <div class="panel"><h3>Your wishlist</h3>${bars}</div>
-    <div class="panel"><h3>Your taste so far</h3>${taste}</div>
-    <div class="meta">You can close this tab. Claude will now update your profile.</div></div>`;
+  const s = await fetch('/api/done', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}).then(r => r.json());
+  summary = s; lastAdded = null; renderWishlist(); renderProgress();
+  $('#leftTitle').innerHTML = 'That\'s it for today' + underline('done');
+  const top = Math.max(1, ...s.taste.map(([, p]) => p));
+  const taste = s.taste.length ? s.taste.map(([tag, pct], i) => {
+    const r = rng(tag); let hatch = '';
+    const w = Math.max(8, 190 * pct / top);
+    for (let x = 4; x < w; x += 6) hatch += `M${x},${16 - r() * 2} L${x + 5},${2 + r() * 2} `;
+    return `<div class="taste-row"><span>${esc(tag)}</span><svg viewBox="0 0 200 18" preserveAspectRatio="none">
+      <path d="${wobblyRect(w + 4, 18, tag, 1.5)}" fill="none" stroke="var(--pencil)" stroke-width="1.4"/>
+      <path d="${hatch}" stroke="var(--blue)" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg><span class="pct">${pct}%</span></div>`;
+  }).join('') : '<p>Swipe a few more days and your taste profile appears here.</p>';
+  $('#idea').innerHTML = `<div class="done turn-in">
+    <h3>All done! &#127881;</h3>
+    <p>${s.streak} ${s.streak === 1 ? 'day' : 'days'} in a row. New ideas after the next /scout.</p>
+    <h3 style="font-size:32px;margin:0;height:var(--line)">What I seem to like</h3>
+    ${taste}
+    <p style="margin-top:var(--line)">You can close this tab now. Claude is updating your profile.</p></div>`;
 }
 
-document.getElementById('like').onclick = () => swipe('like');
-document.getElementById('nope').onclick = () => swipe('dismiss');
-document.getElementById('love').onclick = () => swipe('love');
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight') swipe('like');
-  if (e.key === 'ArrowLeft') swipe('dismiss');
-  if (e.key === 'ArrowUp') swipe('love');
+  if (e.key === 'ArrowRight') act('like');
+  if (e.key === 'ArrowLeft') act('dismiss');
+  if (e.key === 'ArrowUp') { e.preventDefault(); act('love'); }
 });
 
-api('/api/deck').then(d => {
-  deck = d.deck; total = deck.length || 1; updateMeta(d); render();
+$('#today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+fetch('/api/deck').then(r => r.json()).then(d => {
+  deck = d.deck; summary = d;
+  renderWishlist(); renderIdea();
 });
 </script>
 </body>

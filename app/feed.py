@@ -99,6 +99,11 @@ class Handler(BaseHTTPRequestHandler):
             "wishlist": {t: {"have": have[t], "target": self.server.settings["targets"][t]} for t in gf.TIERS},
             "streak": state.get("streak", 0),
             "taste": taste,
+            "items": {
+                t: [{k: c.get(k) for k in ("id", "title", "shop", "price", "url", "status")} for c in items]
+                for t, items in gf.wishlist_items(cards).items()
+            },
+            "tier_ranges": self.server.settings["tiers"],
         }
 
 

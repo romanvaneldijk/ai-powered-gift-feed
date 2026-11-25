@@ -25,6 +25,6 @@ slash commands in Claude Code: `/setup`, `/scout`, `/feed`, `/learn` and `/wishl
 
 - `app/giftfeed.py`: core logic (tiers, cards, deck, swipes, stats, wishlist). Standard library only.
 - `app/cli.py`: the helper commands the slash commands call. Run `python3 app/cli.py -h`.
-- `app/feed.py` and `app/static/index.html`: the local swipe page.
+- `app/feed.py` and `app/static/index.html`: the local gift notebook page.
 - Tests: `python3 -m unittest discover tests`.
 - Keep the repo dependency-free (Python 3.10+ standard library only).
