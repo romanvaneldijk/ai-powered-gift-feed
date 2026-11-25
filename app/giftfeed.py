@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 TIERS = ("big", "medium", "small")
 
 # How much each action counts when learning taste.
-ACTION_WEIGHTS = {"love": 2.0, "like": 1.0, "dismiss": -1.0, "removed": -0.5}
+ACTION_WEIGHTS = {"love": 2.0, "like": 1.0, "later": 0.3, "dismiss": -1.0, "removed": -0.5}
+# "Kinda, maybe later" brings a gift back on another day, at most this many times.
+MAX_LATER = 2
 CARD_KINDS = ("fit", "explore", "wildcard")
 
 
@@ -261,7 +263,7 @@ def build_deck(settings: dict, cards: list[dict], deck_size: int | None = None) 
     """Pick today's deck from unseen cards: per-tier quotas, a mix of fit/explore/wildcard,
     at most one question card, cheapest-first never — the order is shuffled by tier."""
     deck_size = deck_size or int(settings["deck_size"])
-    unseen = [c for c in cards if c["status"] == "new"]
+    unseen = [c for c in cards if c["status"] == "new" or comes_back_today(c)]
     gifts = [c for c in unseen if c.get("type") == "gift"]
     questions = [c for c in unseen if c.get("type") == "question"]
     quota = tier_quota(settings, cards, deck_size)
@@ -299,6 +301,14 @@ def build_deck(settings: dict, cards: list[dict], deck_size: int | None = None) 
     return deck
 
 
+def comes_back_today(card: dict, today: date | None = None) -> bool:
+    """A "maybe later" gift returns from the next day on, until it was postponed MAX_LATER times."""
+    if card.get("status") != "later" or int(card.get("later_count", 0)) > MAX_LATER:
+        return False
+    swiped = (card.get("swiped_at") or "")[:10]
+    return bool(swiped) and swiped < (today or date.today()).isoformat()
+
+
 def interleave(cards: list[dict]) -> list[dict]:
     groups = {t: [c for c in cards if c["tier"] == t] for t in ("small", "medium", "big")}
     out: list[dict] = []
@@ -311,7 +321,7 @@ def interleave(cards: list[dict]) -> list[dict]:
 
 # ---------------------------------------------------------------- swipes
 
-SWIPE_STATUS = {"like": "liked", "love": "loved", "dismiss": "dismissed", "removed": "removed"}
+SWIPE_STATUS = {"like": "liked", "love": "loved", "later": "later", "dismiss": "dismissed", "removed": "removed"}
 
 
 def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None) -> dict:
@@ -330,6 +340,8 @@ def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None)
             raise ValueError(f"unknown action {action}")
         card["status"] = SWIPE_STATUS[action]
         card["swiped_at"] = now_iso()
+        if action == "later":
+            card["later_count"] = int(card.get("later_count", 0)) + 1
         entry = {
             "at": now_iso(), "card": card_id, "action": action,
             "tier": card["tier"], "price": card["price"], "tags": card["tags"], "kind": card["kind"],
@@ -373,8 +385,9 @@ def taste_stats(swipes: list[dict]) -> dict:
         t = s.get("tier")
         if t in tier_actions:
             tier_actions[t][s["action"]] += 1
-            bucket = "kept" if s["action"] in ("like", "love") else "dismissed"
-            tier_prices[t][bucket].append(s["price"])
+            if s["action"] in ("like", "love", "dismiss"):
+                bucket = "kept" if s["action"] != "dismiss" else "dismissed"
+                tier_prices[t][bucket].append(s["price"])
     likes = [(t, round(v, 1)) for t, v in tag_score.most_common() if v > 0]
     dislikes = [(t, round(v, 1)) for t, v in sorted(tag_score.items(), key=lambda kv: kv[1]) if v < 0]
     positive_total = sum(v for _, v in likes) or 1

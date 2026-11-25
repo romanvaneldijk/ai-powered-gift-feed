@@ -2,7 +2,7 @@
 description: Update your gift profile from your latest swipes
 ---
 
-1. Run `python3 app/cli.py stats`. It summarises the swipes since the last /learn: tag scores (love counts double, removed from the wishlist counts as a mild dislike), price comfort per tier and answers to bonus questions. If there are no new swipes, say so and stop.
+1. Run `python3 app/cli.py stats`. It summarises the swipes since the last /learn: tag scores (on the list +1, maybe later +0.3, don't like it -1, removed from the wishlist -0.5), price comfort per tier and answers to bonus questions. If there are no new swipes, say so and stop.
 2. Update `me/profile.md`, keeping its headings and anything the user wrote by hand:
    - **Likes**: tags with a positive score, strongest first, with the running score in brackets, for example `- cooking (+5)`. Merge with the existing list and add up the scores.
    - **Dislikes**: tags with a clearly negative score. A tag needs at least two dismissals before it becomes a dislike.

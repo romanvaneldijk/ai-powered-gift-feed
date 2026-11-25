@@ -117,6 +117,18 @@ class SwipeTests(Base):
         gf.record_swipe(self.p, a["id"], "removed")
         self.assertNotIn("Gift 1", self.p.wishlist.read_text())
 
+    def test_maybe_later_comes_back_another_day_at_most_twice(self):
+        c = gf.add_card(self.p, card(1, 10), SETTINGS)
+        gf.record_swipe(self.p, c["id"], "later")
+        saved = json.loads((self.p.feed / f"{c['id']}.json").read_text())
+        self.assertEqual(saved["status"], "later")
+        self.assertFalse(gf.comes_back_today(saved))  # not on the same day
+        tomorrow = date.fromisoformat(saved["swiped_at"][:10]).toordinal() + 1
+        self.assertTrue(gf.comes_back_today(saved, date.fromordinal(tomorrow)))
+        saved["later_count"] = gf.MAX_LATER + 1
+        self.assertFalse(gf.comes_back_today(saved, date.fromordinal(tomorrow)))
+        self.assertNotIn("Gift 1", self.p.wishlist.read_text())
+
     def test_question_answer(self):
         q = gf.add_card(self.p, {"type": "question", "question": "Tea?", "options": ["Yes", "No"]}, SETTINGS)
         gf.record_swipe(self.p, q["id"], "answer", "Yes")

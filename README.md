@@ -3,8 +3,8 @@
 **A daily gift notebook that builds your personal birthday or Christmas wishlist, powered by Claude Code.**
 
 Every day Claude scouts fresh gift ideas from the web, your favourite shops and Instagram gift guides.
-You flip through them in a notebook in your browser for a couple of minutes: add one to your wishlist,
-or cross it out. Every swipe teaches it your taste, so tomorrow's ideas fit better. It works like
+You flip through them in a notebook in your browser for a couple of minutes: put one on the list,
+save it for later, or cross it out. Every swipe teaches it your taste, so tomorrow's ideas fit better. It works like
 [lootjestrekken.nl](https://www.lootjestrekken.nl/), but keeps getting more personal.
 
 Everything runs on your own machine. Your profile and wishlist stay in plain files on your computer.
@@ -44,7 +44,7 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
 | `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
-| `/feed` | Today's gift notebook in your browser (→ on my list, ← not for me, ↑ love it), then `/learn`. |
+| `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
 | `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
 
@@ -53,8 +53,9 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 - **Your own price tiers.** You choose what counts as a small, medium and big gift, and how many of
   each you want, for example 1 big wish, 3 medium and 6 small. Each deck follows those numbers and
   what your wishlist still needs, so it is never all expensive items.
-- **Swipes become taste.** Each card has tags such as `coffee`, `hiking` or `handmade`. Likes push
-  a tag up, dismissals push it down, and "love it" counts double. `/learn` writes the result into
+- **Your choices become taste.** Each gift has tags such as `coffee`, `hiking` or `handmade`.
+  "Put it on the list" pushes its tags up and "Don't like it" pushes them down. "Kinda, maybe later"
+  counts a little in favour and brings the gift back on another day, at most twice. `/learn` writes the result into
   `me/profile.md` as plain text you can read and edit.
 - **It keeps exploring.** About 20% of each deck explores topics you haven't seen yet, and 10% is a
   wildcard, so your feed doesn't shrink to one hobby.
