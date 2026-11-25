@@ -29,7 +29,8 @@ claude
 
 Then, inside Claude Code:
 
-1. `/setup` plays the 2-minute onboarding quiz: your hobbies, style, no-gos, and your own price ranges.
+1. `/setup` plays **Gift DNA**, the onboarding game (2-minute speedrun or 5-minute full game): this-or-that
+   rounds, the things you use every day, your secret wishes, your taste, your no-gos and your own price ranges.
 2. `/scout` finds your first deck of gift ideas.
 3. `/feed` opens your gift notebook in the browser. When you finish, Claude updates your profile.
 
@@ -40,7 +41,7 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 
 | Command | What it does |
 | --- | --- |
-| `/setup` | The onboarding quiz. Saves your profile and your price tiers. |
+| `/setup` | The onboarding game. Saves your profile, concrete search hints for `/scout` and your price tiers. Replay one round with `/setup <round>`, for example `/setup wishes`. |
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
 | `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
