@@ -1,0 +1,12 @@
+{
+  "tiers": {
+    "small": [5, 25],
+    "medium": [25, 80],
+    "big": [80, 200]
+  },
+  "targets": {"big": 1, "medium": 3, "small": 6},
+  "deck_size": 15,
+  "explore_share": 0.2,
+  "wildcard_share": 0.1,
+  "currency": "EUR"
+}

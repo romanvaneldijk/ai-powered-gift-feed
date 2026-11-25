@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gift feed</title>
+<style>
+  :root {
+    --bg: #f6f3ee; --card: #ffffff; --ink: #1f1d1a; --muted: #6f6a62; --line: #e4ded4;
+    --like: #2f8f5b; --nope: #c2493d; --love: #c0841a; --accent: #3d5afe;
+    --big: #7b4dd6; --medium: #2b7bbf; --small: #2f8f5b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #171614; --card: #23211e; --ink: #f1ede6; --muted: #a29b90; --line: #36332e; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+         display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+  header { width: 100%; max-width: 440px; padding: 16px 16px 8px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; margin: 0; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .progress { width: calc(100% - 32px); max-width: 408px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+  main { position: relative; width: 100%; max-width: 440px; flex: 1; padding: 16px; min-height: 0; }
+  .card { position: absolute; inset: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+          box-shadow: 0 8px 24px rgba(0,0,0,.08); overflow: hidden; display: flex; flex-direction: column;
+          touch-action: none; user-select: none; transition: transform .3s ease, opacity .3s ease; }
+  .card.dragging { transition: none; }
+  .img { flex: 1; min-height: 0; background: var(--line) center / contain no-repeat; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+  .img.has-img { background-color: #fff; }
+  .body { padding: 14px 16px 16px; }
+  .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .title { font-weight: 650; font-size: 18px; margin: 4px 0 2px; }
+  .shop { color: var(--muted); font-size: 14px; }
+  .price { font-weight: 700; font-size: 18px; white-space: nowrap; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: #fff; text-transform: uppercase; letter-spacing: .04em; }
+  .badge.big { background: var(--big); } .badge.medium { background: var(--medium); } .badge.small { background: var(--small); }
+  .reason { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  .links { font-size: 13px; margin-top: 8px; display: flex; gap: 12px; }
+  .links a { color: var(--accent); }
+  .stamp { position: absolute; top: 24px; padding: 4px 12px; border: 3px solid; border-radius: 8px; font-weight: 800; font-size: 24px; opacity: 0; transform: rotate(-12deg); }
+  .stamp.like { left: 20px; color: var(--like); } .stamp.nope { right: 20px; color: var(--nope); transform: rotate(12deg); }
+  .stamp.love { left: 50%; translate: -50% 0; color: var(--love); transform: none; }
+  .question { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px; gap: 12px; }
+  .question h2 { margin: 0 0 8px; font-size: 22px; }
+  .question .kicker { color: var(--muted); font-size: 14px; }
+  .opt { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 16px; cursor: pointer; }
+  .opt:hover { border-color: var(--accent); }
+  footer { display: flex; gap: 20px; padding: 8px 16px 24px; }
+  footer button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-size: 26px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+  footer button:active { transform: scale(.94); }
+  #nope { color: var(--nope); } #love { color: var(--love); width: 52px; height: 52px; align-self: center; font-size: 22px; } #like { color: var(--like); }
+  .hint { color: var(--muted); font-size: 12px; text-align: center; padding-bottom: 8px; }
+  .done { position: absolute; inset: 16px; display: flex; flex-direction: column; gap: 16px; justify-content: center; text-align: center; }
+  .done h2 { font-size: 26px; margin: 0; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; text-align: left; }
+  .panel h3 { margin: 0 0 10px; font-size: 15px; }
+  .bar { display: grid; grid-template-columns: 70px 1fr 48px; gap: 8px; align-items: center; font-size: 14px; margin: 6px 0; }
+  .bar .track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--accent); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎁 Today's gifts</h1>
+  <span class="meta" id="meta"></span>
+</header>
+<div class="progress"><div id="bar"></div></div>
+<main id="stage"></main>
+<div class="hint" id="hint">Drag the card, or use ← not for me · ↑ love it · → add to wishlist</div>
+<footer id="buttons">
+  <button id="nope" title="Not for me (←)">✕</button>
+  <button id="love" title="Love it (↑)">★</button>
+  <button id="like" title="Add to wishlist (→)">♥</button>
+</footer>
+
+<script>
+const stage = document.getElementById('stage');
+let deck = [], index = 0, total = 0, busy = false;
+
+const euro = n => '€' + Number(n).toFixed(2).replace('.', ',');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {});
+  return r.json();
+}
+
+function giftCard(c) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const img = c.image ? `style="background-image:url('${encodeURI(safeUrl(c.image))}')"` : '';
+  el.innerHTML = `
+    <div class="img ${c.image ? 'has-img' : ''}" ${img}>${c.image ? '' : '🎁'}</div>
+    <div class="body">
+      <div class="row"><span class="badge ${c.tier}">${c.tier}</span><span class="price">${euro(c.price)}</span></div>
+      <div class="title">${esc(c.title)}</div>
+      <div class="shop">${esc(c.shop)}</div>
+      ${c.reason ? `<div class="reason">${esc(c.reason)}</div>` : ''}
+      <div class="links"><a href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener">View in shop</a>
+        ${/^https?:/.test(c.source || '') ? `<a href="${esc(c.source)}" target="_blank" rel="noopener">Found via</a>` : ''}</div>
+    </div>
+    <div class="stamp like">WANT</div><div class="stamp nope">NOPE</div><div class="stamp love">LOVE</div>`;
+  addDrag(el);
+  return el;
+}
+
+function questionCard(c) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `<div class="question"><div class="kicker">Bonus question</div><h2>${esc(c.question)}</h2></div>`;
+  const box = el.querySelector('.question');
+  c.options.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.textContent = o;
+    b.onclick = () => answer(o);
+    box.appendChild(b);
+  });
+  return el;
+}
+
+function render() {
+  stage.innerHTML = '';
+  document.getElementById('bar').style.width = (100 * index / total) + '%';
+  if (index >= deck.length) return finish();
+  const c = deck[index];
+  const isQ = c.type === 'question';
+  document.getElementById('buttons').classList.toggle('hidden', isQ);
+  document.getElementById('hint').classList.toggle('hidden', isQ);
+  stage.appendChild(isQ ? questionCard(c) : giftCard(c));
+}
+
+function addDrag(el) {
+  let x0 = 0, y0 = 0, dx = 0, dy = 0, down = false;
+  const stamps = () => el.querySelectorAll('.stamp');
+  el.addEventListener('pointerdown', e => {
+    if (e.target.closest('a')) return;
+    down = true; x0 = e.clientX; y0 = e.clientY; el.classList.add('dragging'); el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', e => {
+    if (!down) return;
+    dx = e.clientX - x0; dy = e.clientY - y0;
+    el.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 20}deg)`;
+    const [like, nope, love] = stamps();
+    like.style.opacity = Math.max(0, dx / 120);
+    nope.style.opacity = Math.max(0, -dx / 120);
+    love.style.opacity = Math.max(0, -dy / 120 - Math.abs(dx) / 240);
+  });
+  const end = () => {
+    if (!down) return;
+    down = false; el.classList.remove('dragging');
+    if (dx > 110) swipe('like');
+    else if (dx < -110) swipe('dismiss');
+    else if (dy < -120) swipe('love');
+    else { el.style.transform = ''; stamps().forEach(s => s.style.opacity = 0); }
+    dx = dy = 0;
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+
+async function swipe(action) {
+  if (busy || index >= deck.length || deck[index].type === 'question') return;
+  busy = true;
+  const el = stage.querySelector('.card');
+  const out = {like: 'translate(140%, 0) rotate(20deg)', dismiss: 'translate(-140%, 0) rotate(-20deg)', love: 'translate(0, -140%)'}[action];
+  if (el) { el.style.transform = out; el.style.opacity = 0; }
+  const res = await api('/api/swipe', {id: deck[index].id, action});
+  if (res.error) alertBox(res.error);
+  updateMeta(res);
+  setTimeout(() => { index++; busy = false; render(); }, 250);
+}
+
+async function answer(option) {
+  if (busy) return;
+  busy = true;
+  await api('/api/swipe', {id: deck[index].id, action: 'answer', answer: option});
+  index++; busy = false; render();
+}
+
+function updateMeta(s) {
+  if (!s || !s.wishlist) return;
+  const w = s.wishlist;
+  document.getElementById('meta').textContent =
+    `🔥 ${s.streak || 0} · list ${w.big.have + w.medium.have + w.small.have}/${w.big.target + w.medium.target + w.small.target}`;
+}
+
+function alertBox(msg) { console.warn(msg); }
+
+async function finish() {
+  document.getElementById('buttons').classList.add('hidden');
+  document.getElementById('hint').classList.add('hidden');
+  const s = await api('/api/done', {});
+  updateMeta(s);
+  const bars = ['big', 'medium', 'small'].map(t => {
+    const {have, target} = s.wishlist[t];
+    const pct = target ? Math.min(100, 100 * have / target) : 100;
+    return `<div class="bar"><span>${t[0].toUpperCase() + t.slice(1)}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span>${have}/${target}</span></div>`;
+  }).join('');
+  const taste = s.taste.length
+    ? s.taste.map(([tag, pct]) => `<div class="bar"><span>${esc(tag)}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span>${pct}%</span></div>`).join('')
+    : '<div class="meta">Swipe a few more days to see your taste profile.</div>';
+  stage.innerHTML = `<div class="done">
+    <h2>Done for today 🎉</h2>
+    <div class="meta">🔥 ${s.streak}-day streak. New picks after the next /scout.</div>
+    <div class="panel"><h3>Your wishlist</h3>${bars}</div>
+    <div class="panel"><h3>Your taste so far</h3>${taste}</div>
+    <div class="meta">You can close this tab. Claude will now update your profile.</div></div>`;
+}
+
+document.getElementById('like').onclick = () => swipe('like');
+document.getElementById('nope').onclick = () => swipe('dismiss');
+document.getElementById('love').onclick = () => swipe('love');
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') swipe('like');
+  if (e.key === 'ArrowLeft') swipe('dismiss');
+  if (e.key === 'ArrowUp') swipe('love');
+});
+
+api('/api/deck').then(d => {
+  deck = d.deck; total = deck.length || 1; updateMeta(d); render();
+});
+</script>
+</body>
+</html>

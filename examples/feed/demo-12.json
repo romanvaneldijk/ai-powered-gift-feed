@@ -1,0 +1,19 @@
+{
+  "id": "demo-12",
+  "type": "gift",
+  "title": "Herb garden starter kit",
+  "shop": "Demo Garden",
+  "url": "https://example.com/demo/demo-12",
+  "price": 14.95,
+  "tier": "small",
+  "image": null,
+  "tags": [
+    "gardening",
+    "cooking"
+  ],
+  "reason": "Fresh herbs for cooking",
+  "kind": "explore",
+  "source": "",
+  "found_at": "2026-11-25T08:11:00+00:00",
+  "status": "new"
+}

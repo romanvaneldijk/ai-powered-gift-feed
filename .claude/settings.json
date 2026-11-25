@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 app/cli.py:*)",
+      "Bash(python3 app/feed.py:*)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  }
+}

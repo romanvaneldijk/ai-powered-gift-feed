@@ -1,0 +1,19 @@
+{
+  "id": "demo-13",
+  "type": "gift",
+  "title": "Wool picnic blanket",
+  "shop": "Demo Home",
+  "url": "https://example.com/demo/demo-13",
+  "price": 45.0,
+  "tier": "medium",
+  "image": null,
+  "tags": [
+    "outdoor",
+    "cosy"
+  ],
+  "reason": "Cosy and outdoorsy",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:12:00+00:00",
+  "status": "new"
+}

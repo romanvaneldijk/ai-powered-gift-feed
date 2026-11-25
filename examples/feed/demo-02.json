@@ -1,0 +1,19 @@
+{
+  "id": "demo-02",
+  "type": "gift",
+  "title": "Hand coffee grinder",
+  "shop": "Demo Coffee Co",
+  "url": "https://example.com/demo/demo-02",
+  "price": 54.0,
+  "tier": "medium",
+  "image": null,
+  "tags": [
+    "coffee",
+    "kitchen"
+  ],
+  "reason": "Fits your coffee hobby",
+  "kind": "fit",
+  "source": "",
+  "found_at": "2026-11-25T08:01:00+00:00",
+  "status": "new"
+}
