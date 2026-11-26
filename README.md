@@ -44,7 +44,7 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 | `/setup` | The onboarding game. Saves your profile, concrete search hints for `/scout` and your price tiers. Replay one round with `/setup <round>`, for example `/setup wishes`. |
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
-| `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
+| `/scout add-insta <url>` | Adds an Instagram gift guide post or account, or a creator's LTK page. Claude finds the products it mentions in a shop. |
 | `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it, ↑ already own it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
 | `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
@@ -71,7 +71,7 @@ All personal files live in `me/`, which is in `.gitignore`:
 me/
 ├── settings.json   your price tiers, gift counts and deck size
 ├── profile.md      your taste profile (written by /setup and /learn)
-├── sources.md      your favourite sites and Instagram gift guides
+├── sources.md      your favourite sites, Instagram gift guides and LTK pages
 ├── feed/           one JSON file per gift idea
 ├── pool.json       checked products waiting for a later deck
 ├── swipes.jsonl    every swipe
@@ -108,6 +108,10 @@ Check your own numbers with `/usage` in Claude Code.
 
 - **Instagram** often blocks automated page reads. When that happens, `/scout` carries on with your
   other sources and asks you to paste the caption or drop in a screenshot of the post next time.
+- **LTK pages** (shopltk.com) are read once per `/scout` run. Their product links usually lead to
+  the shop, and when that shop sells in euros the card links straight to it, with the LTK page as
+  credit. LTK's robots.txt blocks AI crawlers, so the page is only read on your request, one page
+  at a time, and the creator's photos are never used.
 - **Shops:** Claude reads single product pages at a human pace for your personal use and always
   links to the shop. Respect each site's terms.
 - **Prices and stock** change over time. `/wishlist check` finds links that no longer work.

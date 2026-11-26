@@ -1,5 +1,5 @@
 ---
-description: Find new gift ideas for your feed, or add a favourite site or Instagram gift guide
+description: Find new gift ideas for your feed, or add a favourite site, Instagram gift guide or LTK page
 argument-hint: "[add-site <url> | add-insta <url> | next]"
 ---
 
@@ -7,7 +7,7 @@ Arguments: $ARGUMENTS
 
 ## If the arguments start with `add-site` or `add-insta`
 
-Add the URL to the right list in `me/sources.md` ("Favourite websites" or "Instagram gift guides"), unless it is already there. Confirm in one line and stop. Do not scout.
+Add the URL to the right list in `me/sources.md` ("Favourite websites", "Instagram gift guides", or "LTK and other creator shops" for shopltk.com, liketoknow.it and similar creator shop pages; add that heading if it is missing), unless it is already there. Confirm in one line and stop. Do not scout.
 
 ## Otherwise: find gift ideas, fast
 
@@ -28,6 +28,7 @@ Goal: add enough good, real, buyable gift cards for the next deck, quickly. Qual
      For each shop it reports `no-recipe` or `blocked`, use a `WebSearch` per shop and theme instead, such as `site:bol.com koffie cadeau`. A shop that answers `no-results` for every search may have a broken recipe: try `links` on its search page once, or a `WebSearch`.
    - **Open web search:** 2 to 4 `WebSearch` queries for gift guides and shops built from the "Search hints" and the profile's interests and price tiers, Dutch shops first.
    - **Instagram gift guides:** one `WebFetch` of the post or account in the same message. Instagram often blocks automated reads. If it does, do not wait for the user: carry on, and at the end ask them to paste the caption or a screenshot next time. When it works, find each product it names in a shop and use the shop's page and photo, never the creator's photo. Put the Instagram link in the card's `source` as credit.
+   - **LTK and other creator shops** (one page per run, at most; LTK does not want AI crawling at scale): put the page in the same round's `python3 app/cli.py links --any-shop <ltk page>` call. Its product links lead to the shops, often through a redirect. Pick the ones that fit the profile and put them straight into step 6's `check` call: `check` follows the redirect and reads the shop's own page. When it lands on a shop that sells in euros (`ok` with a tier), make the card from it: use the `final_url` it prints as the card's `url` (not the redirect link), and the LTK page as `source` for credit. Only when a link lands on a shop that does not sell in euros (`not-eur`), or `links` finds no product links (the page needs a browser), find the same product or a close match in a euro shop instead, with `search` or one `WebSearch`. Never use the creator's photos: the card's photo comes from the shop page.
    - Gift guide or category pages found by search: `python3 app/cli.py links --any-shop <guide urls>` lists the shop links in them.
    Collect about twice as many product URLs as `cards_to_find` needs. Skip URLs in `known_urls`.
 6. **Check them all in one call:** `python3 app/cli.py check <url> <url> …` (or `--file urls.txt` for many). One line per page:
@@ -43,7 +44,7 @@ Goal: add enough good, real, buyable gift cards for the next deck, quickly. Qual
      "tags": ["coffee", "kitchen", "practical"],
      "reason": "Because you liked the pour-over kit",
      "kind": "fit",
-     "source": "https://www.instagram.com/p/... (or the guide or site where you found it)"
+     "source": "https://www.instagram.com/p/... (or the LTK page, guide or site where you found it)"
    }
    ```
    For pages you read yourself with WebFetch, also give `title`, `shop`, `price` (a number in euros) and `image`.

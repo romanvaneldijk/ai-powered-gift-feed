@@ -56,6 +56,9 @@ SOURCES = """# My gift sources
 
 ## Instagram gift guides
 - https://www.instagram.com/whattowearfor_/
+
+## LTK and other creator shops
+- https://www.shopltk.com/explore/WhatToWearFor_/
 """
 
 
@@ -90,6 +93,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(r["cookinglife.nl"]["search"], "https://www.cookinglife.nl/search?term={q}")
         self.assertNotIn("search", r["unknown-shop.nl"])
         self.assertNotIn("instagram.com", r)
+        self.assertNotIn("shopltk.com", r)
 
     def test_search_url(self):
         self.assertEqual(shops.search_url({"search": "https://s.example/?q={q}"}, " koffie & thee "),
@@ -111,6 +115,12 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        if self.path.startswith("/r/"):  # an affiliate redirect, like LTK's links to shops
+            self.send_response(302)
+            self.send_header("Location", self.path.split("?to=", 1)[1])
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         code, body = PAGES.get(self.path, (404, "missing"))
         data = body.encode()
         self.send_response(code)
@@ -165,6 +175,19 @@ class LiveTests(unittest.TestCase):
         # Once it is a card, the next search leaves it out.
         again = json.loads(self.run_cli("search", "koffie", "--delay", "0")[0])
         self.assertNotIn(checked[0]["url"], [r["url"] for r in again["results"]])
+
+    def test_creator_page_link_through_redirect_becomes_card(self):
+        shop = self.base + "/p/hario-grinder-12345/"
+        redirect = self.base.replace("127.0.0.1", "localhost") + "/r/1?to=" + shop
+        PAGES["/ltk"] = (200, f'<html><body><a href="{redirect}">Hario grinder</a>'
+                              f'<a href="/explore/other-creator">Other</a></body></html>')
+        links = json.loads(self.run_cli("links", "--any-shop", self.base + "/ltk", "--delay", "0")[0])["links"]
+        self.assertEqual([l["url"] for l in links], [redirect])
+        rows = [json.loads(l) for l in self.run_cli("check", redirect, "--delay", "0") if l.startswith("{")]
+        self.assertEqual((rows[0]["status"], rows[0]["final_url"]), ("ok", shop))
+        card = gf.add_card(self.p, {"url": rows[0]["final_url"], "tags": ["coffee"], "reason": "r", "kind": "fit",
+                                    "source": self.base + "/ltk"}, SETTINGS)
+        self.assertEqual((card["url"], card["price"]), (shop, 54.95))
 
 
 class CrawlDelayTests(unittest.TestCase):

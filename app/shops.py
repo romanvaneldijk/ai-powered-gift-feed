@@ -91,8 +91,8 @@ def recipes_from_sources(text: str) -> dict[str, dict]:
         if line.startswith("#"):
             section = line.lower()
             continue
-        if "instagram" in section:
-            continue
+        if section and not ("favourite" in section or "website" in section):
+            continue  # Instagram and creator-shop lists are gift guides, not shops
         m = re.match(r"\s*[-*]\s*(https?://\S+?)\s*(?:\((?:search:\s*)?(https?://[^)\s]+)\))?\s*$", line)
         if not m:
             continue
