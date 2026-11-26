@@ -9,10 +9,10 @@ save it for later, or cross it out. Every swipe teaches it your taste, so tomorr
 
 Everything runs on your own machine. Your profile and wishlist stay in plain files on your computer.
 
-![Today's gift idea, sketched in the notebook, next to your wishlist](docs/notebook-idea.png)
+![Today's gift idea in the notebook, next to your wishlist](docs/notebook-idea.png)
 
-The feed is a notebook on your laptop screen. The left page sketches today's gift ideas one at a time,
-and the right page is your wishlist, filling up as you go. Hover over a sketch to see the real photo.
+The feed is a notebook that fills your whole laptop screen. The left page shows today's gift ideas one at a
+time, with the shop's own photo, and the right page is your wishlist, filling up as you go.
 
 ![The end of the day: your taste so far and your wishlist per price tier](docs/notebook-done.png)
 
