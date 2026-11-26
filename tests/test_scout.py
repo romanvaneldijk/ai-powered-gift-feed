@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 import giftfeed as gf  # noqa: E402
 import scout  # noqa: E402
 
-SETTINGS = gf.build_settings(5, 25, 80, 200, big=1, medium=3, small=6, deck_size=10)
+SETTINGS = gf.build_settings(5, 25, 80, 200, deck_size=10)
 
 
 def ld(obj) -> str:
@@ -184,6 +184,26 @@ class LiveTests(unittest.TestCase):
         gf.write_json(self.p.pool, pool)
         with self.assertRaises(ValueError):
             gf.add_card(self.p, {"url": url, "tags": ["coffee"]}, SETTINGS)
+
+    def test_import_list_reads_links_and_leaves_words(self):
+        import contextlib, io
+        import cli
+        text = (f"My list\n- {self.url('/grinder')}\n2. a linen apron in green\n"
+                f"* {self.url('/blocked')} (the blue one)\n\n{self.url('/grinder')}?ref=x\n")
+        f = Path(self.tmp.name) / "list.txt"
+        f.write_text(text)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            cli.main(["--me", self.tmp.name, "import-list", "--file", str(f), "--delay", "0"])
+        rows = [json.loads(l) for l in out.getvalue().splitlines() if l.startswith("{")]
+        self.assertEqual([r["todo"] for r in rows],
+                         ["find it in a shop", "add by url", "find it in a shop", "read the page yourself"])
+        self.assertEqual(rows[1]["price"], 54.95)
+        self.assertEqual(rows[3]["hint"], "the blue one")
+        # The read link is in the pool now, so it can go on the wishlist by url.
+        card = gf.add_card(self.p, {"url": self.url("/grinder"), "tags": ["coffee"], "source": "imported"},
+                           SETTINGS, to_wishlist=True)
+        self.assertEqual(card["status"], "liked")
 
 
 

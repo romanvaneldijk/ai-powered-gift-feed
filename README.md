@@ -47,13 +47,17 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 | `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
 | `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it, ↑ already own it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
-| `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
+| `/wishlist` | Shows your list by tier. Use `import` to bring in a wishlist you already have, `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
 
 ## How it learns
 
-- **Your own price tiers.** You choose what counts as a small, medium and big gift, and how many of
-  each you want, for example 1 big wish, 3 medium and 6 small. Each deck follows those numbers and
-  what your wishlist still needs, so it is never all expensive items.
+- **Your own price tiers.** You choose what counts as a small, medium and big gift. There is no
+  fixed number of gifts per tier: your list can be as long as you like. Each deck mixes the three
+  tiers evenly, so it is never all expensive items.
+- **Bring your own list.** `/wishlist import` takes a list you already have, one gift per line, as a
+  link or in words ("a good pepper grinder"). Links are read and checked; for words Claude finds a
+  real product in a shop that sells in euros. Imported gifts go straight on your wishlist and count
+  as "put it on the list" for your taste.
 - **Your choices become taste.** Each gift has tags such as `coffee`, `hiking` or `handmade`.
   "Put it on the list" pushes its tags up and "Don't like it" pushes them down. "Kinda, maybe later"
   counts a little in favour and brings the gift back on another day, at most twice. "Already own it"
@@ -69,7 +73,7 @@ All personal files live in `me/`, which is in `.gitignore`:
 
 ```
 me/
-├── settings.json   your price tiers, gift counts and deck size
+├── settings.json   your price tiers and deck size
 ├── profile.md      your taste profile (written by /setup and /learn)
 ├── sources.md      your favourite sites and Instagram gift guides
 ├── feed/           one JSON file per gift idea

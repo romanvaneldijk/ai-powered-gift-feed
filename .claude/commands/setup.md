@@ -20,7 +20,7 @@ level deeper than a normal gift quiz.
 - After each round, give a one-line reaction that shows you listened ("A pour-over fan who hikes
   in the rain. Noted. ☕🌧️"). No long recaps until the end.
 - Free-text rounds give 3 or 4 examples so the user knows what kind of answer helps.
-- Never invent answers, prices or counts for the user. Write down only what they said, plus your
+- Never invent answers or prices for the user. Write down only what they said, plus your
   clearly labelled ideas under "Curious about" and "Search hints".
 
 ## 0. Start
@@ -98,14 +98,14 @@ Ask each as its own question and accept a number in euros:
   b. "Up to what price is a gift a *small* gift for you?" (small max)
   c. "From what price is it a *big* gift?" (big min, must be above small max)
   d. "What's the most anyone should spend on your biggest wish?" (big max)
-Then how many gifts they want per tier: big wishes (0 to 3), medium gifts, small gifts.
-Never fill in a price or a count yourself. If the user skips a price question, ask it again later in
+There is no question about how many gifts per tier: the wishlist has no fixed size and every tier
+can grow as long as the user likes. Never fill in a price yourself. If the user skips a price question, ask it again later in
 this session or on the next /setup, but do not guess.
 
 ## 2. Save
 
-1. Save the prices and counts:
-   `python3 app/cli.py settings --min-price A --small-max B --big-min C --big-max D --big N --medium N --small N`
+1. Save the prices:
+   `python3 app/cli.py settings --min-price A --small-max B --big-min C --big-max D`
    If it reports an error (for example overlapping tiers), explain it in plain words and ask again.
 2. Fill in `me/profile.md`, keeping all of its headings, including any you have no answers for:
    - **About me**: age range, gender if given, gift style and gift vibes (from Round 2), occasion and date.
@@ -144,8 +144,9 @@ question. This takes 30 seconds and catches a generic profile before /scout spen
 Show a short **Gift DNA** card in the chat:
 - a one-line gift persona, for example "🧭 The cosy outdoor nerd: rain-proof, coffee-fuelled, prefers
   one perfect thing over a pile of stuff",
-- their three price tiers with counts,
+- their three price tiers,
 - top interests and their 3 strongest search hints,
 - their no-gos.
-Then suggest running `/scout` to find their first deck, followed by `/feed`. Mention they can replay a
+Then suggest running `/scout` to find their first deck, followed by `/feed`. If they already keep a
+wishlist somewhere, mention `/wishlist import` to bring it in. Mention they can replay a
 single round any time, for example `/setup wishes`.

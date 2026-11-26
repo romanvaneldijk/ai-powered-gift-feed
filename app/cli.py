@@ -32,8 +32,7 @@ def cmd_init(args, p: gf.Paths) -> None:
 
 
 def cmd_settings(args, p: gf.Paths) -> None:
-    s = gf.build_settings(args.min_price, args.small_max, args.big_min, args.big_max,
-                          args.big, args.medium, args.small, args.deck_size)
+    s = gf.build_settings(args.min_price, args.small_max, args.big_min, args.big_max, args.deck_size)
     old = gf.read_json(p.settings, {})
     for key in ("explore_share", "wildcard_share"):
         if key in old:
@@ -51,10 +50,15 @@ def cmd_add_card(args, p: gf.Paths) -> None:
     ok, failed = 0, 0
     for raw in raws:
         try:
-            card = gf.add_card(p, raw, settings)
+            card = gf.add_card(p, raw, settings, to_wishlist=args.wishlist)
             ok += 1
             label = card.get("title") or card.get("question")
             extra = f" [{card['tier']}, €{card['price']:.2f}]" if card["type"] == "gift" else " [question]"
+            if args.wishlist:
+                lo, hi = settings["tiers"][card["tier"]]
+                if not lo <= card["price"] <= hi:
+                    extra += " (outside your price tiers, put with the nearest tier)"
+                extra += " -> moved to your wishlist" if card.get("moved") else " -> on your wishlist"
             print(f"added {card['id']}: {label}{extra}")
         except ValueError as e:
             failed += 1
@@ -77,7 +81,7 @@ def cmd_status(args, p: gf.Paths) -> None:
     to_find = {t: max(quota[t] - unseen[t], 0) for t in gf.TIERS}
     out = {
         "price_tiers": settings["tiers"],
-        "wishlist": {t: f"{have[t]}/{settings['targets'][t]}" for t in gf.TIERS},
+        "wishlist": {t: have[t] for t in gf.TIERS},
         "next_deck_quota": quota,
         "unseen_cards": unseen,
         "cards_to_find": to_find,
@@ -115,6 +119,50 @@ def cmd_check(args, p: gf.Paths) -> None:
     usable = sum(1 for r in results if r["status"] == "ok" and r.get("tier") and r.get("in_stock") and not r.get("known"))
     print(f"# {len(results)} pages in {time.monotonic() - started:.0f}s: "
           + ", ".join(f"{n} {s}" for s, n in counts.most_common()) + f". {usable} ready to add by url.")
+
+
+def cmd_import_list(args, p: gf.Paths) -> None:
+    """Read a pasted wishlist (one gift per line: a link or words) and read every link's page.
+
+    Prints one JSON line per item. Links that read fine are ready for `add-card --wishlist` by url;
+    words (and links that could not be read) are left for Claude to find in a shop.
+    """
+    settings = gf.load_settings(p)
+    text = Path(args.file).read_text(encoding="utf-8") if args.file else sys.stdin.read()
+    items = gf.parse_import_list(text)
+    if not items:
+        raise SystemExit("no gifts found: give one gift per line, as a link or in words")
+    links = [i["url"] for i in items if i["url"]]
+    checked = {}
+    if links:
+        fetcher = scout.Fetcher(delay=args.delay)
+        for r in gf.save_checked(p, scout.check_many(links, fetcher, workers=args.workers), settings):
+            checked[r["url"]] = r
+    on_list = {gf.normalise_url(c["url"]) for c in gf.load_cards(p)
+               if c.get("type") == "gift" and c["status"] in ("liked", "loved")}
+    counts = Counter()
+    for item in items:
+        row = {"line": item["line"]}
+        if item["url"]:
+            r = checked.get(item["url"], {})
+            row["url"] = r.get("final_url") or item["url"]
+            if item["words"]:
+                row["hint"] = item["words"]
+            if gf.normalise_url(row["url"]) in on_list or gf.normalise_url(item["url"]) in on_list:
+                row["todo"] = "already on the wishlist"
+            elif r.get("status") == "ok" and r.get("price") is not None:
+                row |= {k: r[k] for k in ("title", "shop", "price", "in_stock") if r.get(k) is not None}
+                row["tier"] = gf.nearest_tier(r["price"], settings)
+                row["todo"] = "add by url"
+            else:
+                row["todo"] = "read the page yourself"
+                row["note"] = r.get("note") or r.get("error") or r.get("status") or "could not read the page"
+        else:
+            row["words"] = item["words"]
+            row["todo"] = "find it in a shop"
+        counts[row["todo"]] += 1
+        print(json.dumps(row, ensure_ascii=False))
+    print(f"# {len(items)} gifts: " + ", ".join(f"{n} {t}" for t, n in counts.most_common()))
 
 
 def cmd_links(args, p: gf.Paths) -> None:
@@ -199,18 +247,22 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("init", help="create me/ from templates")
 
-    s = sub.add_parser("settings", help="save price tiers and targets from /setup answers")
+    s = sub.add_parser("settings", help="save price tiers from /setup answers")
     s.add_argument("--min-price", type=float, required=True, help="the least a gift should cost")
     s.add_argument("--small-max", type=float, required=True, help="up to this price a gift is small")
     s.add_argument("--big-min", type=float, required=True, help="from this price a gift is big")
     s.add_argument("--big-max", type=float, required=True, help="the most anyone should spend on a big wish")
-    s.add_argument("--big", type=int, required=True, help="how many big wishes")
-    s.add_argument("--medium", type=int, required=True, help="how many medium gifts")
-    s.add_argument("--small", type=int, required=True, help="how many small gifts")
     s.add_argument("--deck-size", type=int, default=15)
 
     a = sub.add_parser("add-card", help="add cards (JSON object or list) from stdin or --file")
     a.add_argument("--file")
+    a.add_argument("--wishlist", action="store_true",
+                   help="imported wishes: put them straight on the wishlist (counts as a like)")
+
+    im = sub.add_parser("import-list", help="read a pasted wishlist (links or words, one per line)")
+    im.add_argument("--file", help="a text file with one gift per line (default: stdin)")
+    im.add_argument("--workers", type=int, default=scout.WORKERS)
+    im.add_argument("--delay", type=float, default=scout.PER_HOST_DELAY)
 
     st = sub.add_parser("status", help="what the next /scout should find")
     st.add_argument("--urls", action="store_true", help="also list product URLs already found")

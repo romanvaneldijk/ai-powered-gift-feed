@@ -269,6 +269,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
 const euro = n => '€' + (Number(n) % 1 ? Number(n).toFixed(2).replace('.', ',') : Number(n).toFixed(0));
 const TIER_NAMES = { big: 'Big wishes', medium: 'Medium gifts', small: 'Small gifts' };
+// The list itself can be as long as you like; the notebook page shows this many per tier.
+const SHOWN_PER_TIER = 6;
 const TIER_TAB = { big: 'a big wish', medium: 'medium gift', small: 'small gift' };
 
 const giftDoodle = `
@@ -335,9 +337,9 @@ function renderWishlist() {
   if (!summary) return;
   const w = $('#wishlist');
   w.innerHTML = ['big', 'medium', 'small'].map(t => {
-    const items = summary.items[t] || [], target = summary.wishlist[t].target;
+    const items = summary.items[t] || [];
     const [lo, hi] = summary.tier_ranges[t];
-    const shown = items.slice(0, Math.max(target, 1) + 1);
+    const shown = items.slice(0, SHOWN_PER_TIER);
     const lis = shown.map((it, i) => `
       <li class="${it.id === lastAdded ? 'fresh' : ''}">
         <svg class="box" viewBox="0 0 18 18"><path d="${wobblyRect(18, 18, it.id, 1.2)}" fill="none" stroke="var(--pencil)" stroke-width="1.4"/>
@@ -345,11 +347,11 @@ function renderWishlist() {
         <span class="name"><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(it.title)}</a></span>
         ${it.status === 'loved' ? '<span class="star">&#9733;</span>' : ''}
         <span class="p">${euro(it.price)}</span></li>`).join('');
-    const empties = Math.max(0, target - items.length);
-    const blank = Array.from({length: Math.min(empties, 3)}, () =>
+    // No fixed size per tier: one empty box invites the next gift, however long the list is.
+    const blank = Array.from({length: items.length > shown.length ? 0 : 1}, () =>
       `<li class="empty"><svg class="box" viewBox="0 0 18 18"><path d="${wobblyRect(18, 18, t + Math.random(), 1.2)}" fill="none" stroke="var(--faint)" stroke-width="1.2"/></svg>&hellip;</li>`).join('');
     const more = items.length > shown.length ? `<li class="more">+ ${items.length - shown.length} more in wishlist.md</li>` : '';
-    return `<div class="tier"><h3><span>${TIER_NAMES[t]}<span class="range">${euro(lo)}&ndash;${euro(hi)}</span></span><span class="count">${items.length} / ${target}</span></h3><ul>${lis}${more}${blank}</ul></div>`;
+    return `<div class="tier"><h3><span>${TIER_NAMES[t]}<span class="range">${euro(lo)}&ndash;${euro(hi)}</span></span><span class="count">${items.length}</span></h3><ul>${lis}${more}${blank}</ul></div>`;
   }).join('');
   $('#streak').textContent = summary.streak ? `🔥 ${summary.streak} ${summary.streak === 1 ? 'day' : 'days'} in a row` : 'day one, here we go!';
 }
