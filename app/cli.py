@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import giftfeed as gf  # noqa: E402
 import scout  # noqa: E402
+import shops  # noqa: E402
 
 
 def cmd_init(args, p: gf.Paths) -> None:
@@ -126,6 +127,56 @@ def cmd_links(args, p: gf.Paths) -> None:
         print(json.dumps(page, ensure_ascii=False))
 
 
+def cmd_search(args, p: gf.Paths) -> None:
+    """Search the user's favourite shops with each shop's own search page."""
+    settings = gf.load_settings(p)
+    recipes = shops.load_recipes(p.sources)
+    wanted = [shops.host_of(s if "//" in s else "https://" + s) for s in args.shop] if args.shop else None
+    if wanted:
+        recipes = {h: recipes.get(h) or dict(shops.RECIPES.get(h, {})) for h in wanted}
+    no_recipe = sorted(h for h, r in recipes.items() if not r.get("search"))
+    recipes = {h: r for h, r in recipes.items() if r.get("search")}
+    if not recipes:
+        raise SystemExit("no shop with a search recipe: add `(search: https://…{q})` after a site in me/sources.md")
+    known = {gf.normalise_url(c["url"]) for c in gf.load_cards(p) if c.get("url")}
+    started = time.monotonic()
+    fetcher = scout.Fetcher(delay=args.delay)
+    jobs = [(h, r, q) for q in args.queries for h, r in recipes.items()]
+    seen: set[str] = set()
+    to_check: list[str] = []
+    per_shop: Counter = Counter()
+    for res in shops.search_many(jobs, fetcher, limit=args.limit):
+        rows = []
+        for r in res["results"]:
+            key = gf.normalise_url(r["url"])
+            if key in known or key in seen:
+                continue
+            seen.add(key)
+            r["tier"] = gf.tier_for_price(r["price"], settings) if r["price"] is not None else None
+            if r["price"] is not None and r["tier"] is None:
+                continue  # outside the user's price tiers
+            if r.get("in_stock") is False:
+                continue
+            rows.append({k: v for k, v in r.items() if v not in (None, "") and k != "shop"})
+            if args.check and per_shop[res["host"]] < args.check_max:
+                per_shop[res["host"]] += 1
+                to_check.append(r["url"])
+        res["results"] = rows
+        print(json.dumps(res, ensure_ascii=False))
+    for h in no_recipe:
+        note = (shops.RECIPES.get(h) or {}).get("note") or "no search page known: use a web search"
+        print(json.dumps({"host": h, "status": "no-recipe", "note": note}))
+    if to_check:
+        print(f"# checking {len(to_check)} product pages")
+        results = gf.save_checked(p, scout.check_many(to_check, fetcher), settings)
+        keep = ("url", "status", "title", "shop", "price", "tier", "in_stock", "image", "note", "final_url")
+        for r in results:
+            print(json.dumps({k: r[k] for k in keep if r.get(k) not in (None, "")}, ensure_ascii=False))
+        ready = sum(1 for r in results if r["status"] == "ok" and r.get("tier") and r.get("in_stock"))
+        print(f"# {ready} of {len(results)} checked pages ready to add by url")
+    print(f"# {len(jobs)} searches in {time.monotonic() - started:.0f}s, {len(seen)} new products found")
+
+
 def cmd_pool(args, p: gf.Paths) -> None:
     """Checked products from earlier runs that are not a card yet."""
     settings = gf.load_settings(p)
@@ -228,6 +279,14 @@ def main(argv: list[str] | None = None) -> None:
     li.add_argument("--any-shop", action="store_true", help="for gift guides: keep links to other sites")
     li.add_argument("--limit", type=int, default=30, help="links per page")
     li.add_argument("--delay", type=float, default=scout.PER_HOST_DELAY)
+
+    se = sub.add_parser("search", help="search your favourite shops with their own search pages")
+    se.add_argument("queries", nargs="+", help="one or more searches, such as \"koffie cadeau\"")
+    se.add_argument("--shop", action="append", help="only this shop (host or URL); repeat for more")
+    se.add_argument("--limit", type=int, default=8, help="results per shop and search")
+    se.add_argument("--check", action="store_true", help="also read the product pages found, like `check`")
+    se.add_argument("--check-max", type=int, default=4, help="with --check: product pages per shop")
+    se.add_argument("--delay", type=float, default=scout.PER_HOST_DELAY)
 
     sub.add_parser("pool", help="checked products from earlier runs that are not a card yet")
 

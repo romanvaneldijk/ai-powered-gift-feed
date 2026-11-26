@@ -90,6 +90,13 @@ heavy part, so `/scout` keeps them small and fast:
   parallel and pulls the title, price, stock and photo from the data shops publish for search
   engines (schema.org JSON-LD, OpenGraph tags). Claude only reads a page itself when a shop blocks
   scripts. Each shop still gets one page at a time with a pause in between, and robots.txt is honoured.
+- **Shops are searched with their own search page.** `python3 app/cli.py search "koffie cadeau" …`
+  turns your search hints into searches on each favourite shop's own search page and reads name,
+  price, photo and link from the results, without Claude. Each shop has a small recipe
+  (`app/shops.py`): Shopify shops answer a public JSON search, other shops get their results page
+  read. Add your own with a `search:` URL in `me/sources.md`. Shops whose robots.txt asks scripts
+  not to read search pages (such as bol.com) get a normal web search instead, and a shop's
+  `Crawl-delay` is honoured.
 - **Batched searches.** All searches of a round go out at once, with at most two rounds per run.
 - **Nothing is read twice.** Checked products that did not make today's deck wait in `me/pool.json`
   for the next run, and shop search pages that work are remembered in `me/sources.md`.
@@ -108,6 +115,7 @@ Check your own numbers with `/usage` in Claude Code.
 ## For developers
 
 - `app/giftfeed.py`: core logic (tiers, cards, deck, swipes, stats). Python standard library only.
+- `app/shops.py`: shop search recipes for `cli.py search` (Shopify JSON search, results-page reader).
 - `app/cli.py`: helper commands the slash commands call (`python3 app/cli.py -h`).
 - `app/scout.py`: the fast page reader behind `cli.py check` and `cli.py links`.
 - `app/feed.py` and `app/static/index.html`: the local gift notebook page.
