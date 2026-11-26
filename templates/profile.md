@@ -27,6 +27,10 @@
 <!-- Never suggest these, e.g. "no clothing", "no alcohol" -->
 -
 
+## Already own
+<!-- Things you already have: /scout never suggests these or near copies of them -->
+-
+
 ## Bonus answers
 <!-- Answers to the daily bonus questions -->
 -

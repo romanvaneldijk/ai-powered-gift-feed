@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 TIERS = ("big", "medium", "small")
 
 # How much each action counts when learning taste.
-ACTION_WEIGHTS = {"love": 2.0, "like": 1.0, "later": 0.3, "dismiss": -1.0, "removed": -0.5}
+# "Already own it": they chose this kind of thing for themselves once, so it is a good taste signal,
+# but the item itself never comes back and never goes on the wishlist.
+ACTION_WEIGHTS = {"love": 2.0, "like": 1.0, "owned": 0.7, "later": 0.3, "dismiss": -1.0, "removed": -0.5}
 # "Kinda, maybe later" brings a gift back on another day, at most this many times.
 MAX_LATER = 2
 CARD_KINDS = ("fit", "explore", "wildcard")
@@ -421,7 +423,7 @@ def interleave(cards: list[dict]) -> list[dict]:
 
 # ---------------------------------------------------------------- swipes
 
-SWIPE_STATUS = {"like": "liked", "love": "loved", "later": "later", "dismiss": "dismissed", "removed": "removed"}
+SWIPE_STATUS = {"like": "liked", "love": "loved", "owned": "owned", "later": "later", "dismiss": "dismissed", "removed": "removed"}
 
 
 def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None) -> dict:
@@ -443,7 +445,7 @@ def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None)
         if action == "later":
             card["later_count"] = int(card.get("later_count", 0)) + 1
         entry = {
-            "at": now_iso(), "card": card_id, "action": action,
+            "at": now_iso(), "card": card_id, "action": action, "title": card["title"], "shop": card["shop"],
             "tier": card["tier"], "price": card["price"], "tags": card["tags"], "kind": card["kind"],
         }
     save_card(p, card)
@@ -474,7 +476,10 @@ def taste_stats(swipes: list[dict]) -> dict:
     tier_actions: dict[str, Counter] = {t: Counter() for t in TIERS}
     tier_prices: dict[str, dict[str, list[float]]] = {t: {"kept": [], "dismissed": []} for t in TIERS}
     answers = []
+    owned = []
     for s in swipes:
+        if s["action"] == "owned":
+            owned.append(s.get("title") or s["card"])
         if s["action"] == "answer":
             answers.append({"question": s["question"], "answer": s["answer"]})
             continue
@@ -506,6 +511,7 @@ def taste_stats(swipes: list[dict]) -> dict:
             for t in TIERS
         },
         "answers": answers,
+        "already_owned": owned,
     }
 
 
