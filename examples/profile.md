@@ -42,6 +42,9 @@
 ## Hard no-gos
 - no clothing
 
+## Already own
+-
+
 ## Search hints
 - upgrade: a good hand coffee grinder (blade grinder now, V60 fan)
 - wish: a cast-iron pan

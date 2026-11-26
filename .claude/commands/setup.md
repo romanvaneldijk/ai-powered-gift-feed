@@ -124,6 +124,8 @@ this session or on the next /setup, but do not guess.
      `- consumable: specialty beans from a Dutch roaster`
      Be specific about product type, material, colour or brand when the user gave one. Never write a
      product name, shop URL or price here that the user did not give you.
+   - **Already own**: specific products they said they own (from Rounds 3 and 4, for example
+     `- V60 pour-over dripper`), one per line, so /scout never suggests them. /learn adds more later.
    - Leave **Likes**, **Dislikes** and **Bonus answers** for /learn.
 3. Show the user `me/sources.md` (their favourite sites and Instagram gift guides) and ask if they want
    to add or remove any. If they named favourite shops in Round 7, offer to add those too. Mention

@@ -53,6 +53,10 @@
 <!-- Never suggest these, e.g. "no clothing", "no alcohol" -->
 -
 
+## Already own
+<!-- Things you already have: /scout never suggests these or near copies of them -->
+-
+
 ## Search hints
 <!-- Concrete leads for /scout, built by /setup from your answers, e.g.
      "- upgrade: a good hand coffee grinder (blade grinder now, V60 fan)". Edit freely. -->
