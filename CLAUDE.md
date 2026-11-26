@@ -11,10 +11,11 @@ slash commands in Claude Code: `/setup`, `/scout`, `/feed`, `/learn` and `/wishl
   to anywhere outside this machine, and never move personal data out of `me/`.
 - Never invent a product, URL, price, stock status or image URL. Every card must come from a product
   page you actually read in this session, or that `cli.py check` read in the last 3 days.
-- Prices are in euros. The price tiers and the number of gifts per tier come only from the user's own
-  answers in `/setup` (stored in `me/settings.json`). Do not change them without the user's consent.
-- Always add cards through `python3 app/cli.py add-card`, which validates them, assigns the tier and
-  refuses duplicates. Do not write files in `me/feed/` by hand.
+- Prices are in euros. The price tiers come only from the user's own answers in `/setup` (stored in
+  `me/settings.json`). Do not change them without the user's consent. There is no fixed number of
+  gifts per tier: the wishlist can grow as long as the user likes.
+- Always add cards through `python3 app/cli.py add-card` (`--wishlist` for gifts the user imports
+  from their own list), which validates them, assigns the tier and refuses duplicates. Do not write files in `me/feed/` by hand.
 - Respect the user's hard no-gos in `me/profile.md` without exception.
 - Be light on usage: read product pages with `python3 app/cli.py check` (parallel, no Claude tokens)
   and use WebFetch only for pages it cannot read; read each page once, batch searches, and stop

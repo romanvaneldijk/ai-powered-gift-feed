@@ -96,7 +96,7 @@ class Handler(BaseHTTPRequestHandler):
         state = gf.read_json(p.state, {})
         taste = gf.taste_stats(gf.load_swipes(p))["taste_card"]
         return {
-            "wishlist": {t: {"have": have[t], "target": self.server.settings["targets"][t]} for t in gf.TIERS},
+            "wishlist": {t: {"have": have[t]} for t in gf.TIERS},
             "streak": state.get("streak", 0),
             "taste": taste,
             "items": {

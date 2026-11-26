@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 import giftfeed as gf  # noqa: E402
 
-SETTINGS = gf.build_settings(5, 25, 80, 200, big=1, medium=3, small=6, deck_size=10)
+SETTINGS = gf.build_settings(5, 25, 80, 200, deck_size=10)
 
 
 def card(i, price, kind="fit", tags=("cooking",)):
@@ -36,7 +36,7 @@ class TierTests(unittest.TestCase):
 
     def test_overlapping_tiers_refused(self):
         with self.assertRaises(ValueError):
-            gf.build_settings(5, 50, 40, 200, 1, 1, 1)
+            gf.build_settings(5, 50, 40, 200)
 
 
 class CardTests(Base):
@@ -53,6 +53,43 @@ class CardTests(Base):
             gf.add_card(self.p, {"title": "x"}, SETTINGS)
 
 
+class ImportTests(Base):
+    def test_parse_import_list(self):
+        items = gf.parse_import_list(
+            "# Birthday\n- [ ] Hario hand grinder\n1) https://shop.example/p/1?utm=a, for coffee\n"
+            "• https://shop.example/p/1\n\n   hario hand grinder  \nLEGO   botanical set\n")
+        self.assertEqual([i["url"] for i in items], [None, "https://shop.example/p/1?utm=a", None])
+        self.assertEqual(items[0]["words"], "Hario hand grinder")
+        self.assertEqual(items[1]["words"], "for coffee")
+        self.assertEqual(items[2]["words"], "LEGO botanical set")
+
+    def test_imported_gift_goes_on_wishlist_and_counts_as_like(self):
+        c = gf.add_card(self.p, card(1, 500, tags=("garden",)) | {"imported_from": "a big BBQ"},
+                        SETTINGS, to_wishlist=True)
+        self.assertEqual((c["status"], c["tier"], c["imported_from"]), ("liked", "big", "a big BBQ"))
+        small = gf.add_card(self.p, card(2, 2), SETTINGS, to_wishlist=True)
+        self.assertEqual(small["tier"], "small")
+        self.assertIn("Gift 1", self.p.wishlist.read_text())
+        stats = gf.taste_stats(gf.load_swipes(self.p))
+        self.assertIn(("garden", 1.0), stats["likes"])
+        self.assertIsNone(stats["tiers"]["big"]["avg_kept_price"])  # not price comfort
+        with self.assertRaises(ValueError):
+            gf.add_card(self.p, card(1, 500), SETTINGS, to_wishlist=True)  # already on the list
+
+    def test_import_moves_a_feed_card_onto_the_wishlist(self):
+        c = gf.add_card(self.p, card(3, 30), SETTINGS)
+        gf.record_swipe(self.p, c["id"], "dismiss")
+        moved = gf.add_card(self.p, card(3, 30), SETTINGS, to_wishlist=True)
+        self.assertEqual((moved["id"], moved["status"]), (c["id"], "liked"))
+        self.assertEqual(len(gf.load_cards(self.p)), 1)
+
+    def test_long_wishlist_has_no_cap(self):
+        for i in range(25):
+            gf.add_card(self.p, card(i, 10), SETTINGS, to_wishlist=True)
+        self.assertEqual(len(gf.wishlist_items(gf.load_cards(self.p))["small"]), 25)
+        self.assertIn("Small gifts (25)", self.p.wishlist.read_text())
+
+
 class DeckTests(Base):
     def fill(self, n_per_tier=10):
         prices = {"small": 10, "medium": 40, "big": 120}
@@ -63,27 +100,29 @@ class DeckTests(Base):
                 gf.add_card(self.p, card(i, price, kind), SETTINGS)
                 i += 1
 
-    def test_quota_follows_targets_and_sums_to_deck_size(self):
+    def test_quota_is_even_and_sums_to_deck_size(self):
         q = gf.tier_quota(SETTINGS, [])
-        self.assertEqual(sum(q.values()), 10)
-        self.assertEqual(q, {"big": 1, "medium": 3, "small": 6})
+        self.assertEqual(q, {"big": 3, "medium": 3, "small": 4})
 
-    def test_full_tier_gets_no_cards(self):
+    def test_no_tier_is_ever_full(self):
         self.fill()
-        cards = gf.load_cards(self.p)
-        big = next(c for c in cards if c["tier"] == "big")
-        gf.record_swipe(self.p, big["id"], "like")
+        for c in [c for c in gf.load_cards(self.p) if c["tier"] == "big"][:5]:
+            gf.record_swipe(self.p, c["id"], "like")
         q = gf.tier_quota(SETTINGS, gf.load_cards(self.p))
-        self.assertEqual(q["big"], 0)
+        self.assertEqual(q["big"], 3)
         self.assertEqual(sum(q.values()), 10)
+
+    def test_old_settings_with_targets_still_load(self):
+        gf.write_json(self.p.settings, SETTINGS | {"targets": {"big": 1, "medium": 3, "small": 6}})
+        self.assertEqual(gf.load_settings(self.p)["tiers"], SETTINGS["tiers"])
 
     def test_deck_mixes_tiers_and_is_not_all_expensive(self):
         self.fill()
         deck = gf.build_deck(SETTINGS, gf.load_cards(self.p))
         tiers = [c["tier"] for c in deck]
         self.assertEqual(len(deck), 10)
-        self.assertEqual(tiers.count("big"), 1)
-        self.assertEqual(tiers.count("small"), 6)
+        self.assertEqual(tiers.count("big"), 3)
+        self.assertEqual(tiers.count("small"), 4)
         self.assertNotEqual(tiers[0], "big")
 
     def test_short_tier_is_filled_from_others(self):
@@ -110,7 +149,7 @@ class SwipeTests(Base):
         wl = self.p.wishlist.read_text()
         self.assertIn("Gift 1", wl)
         self.assertNotIn("Gift 2", wl)
-        self.assertIn("Small gifts (2/6)", wl)
+        self.assertIn("Small gifts (2)", wl)
         stats = gf.taste_stats(gf.load_swipes(self.p))
         self.assertEqual(stats["likes"][0], ("coffee", 3.0))
         self.assertIn(("gaming", -1.0), stats["dislikes"])

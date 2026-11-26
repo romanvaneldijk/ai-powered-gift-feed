@@ -106,24 +106,21 @@ def validate_settings(s: dict) -> None:
             raise ValueError(f"settings.tiers.{t} must be [min, max] with max > min, got {tiers.get(t)}")
     if not tiers["small"][1] <= tiers["medium"][0] + 1e-9 or not tiers["medium"][1] <= tiers["big"][0] + 1e-9:
         raise ValueError("price tiers must not overlap: small < medium < big")
-    targets = s.get("targets") or {}
-    for t in TIERS:
-        if int(targets.get(t, -1)) < 0:
-            raise ValueError(f"settings.targets.{t} must be 0 or more")
+    # Older settings files may still hold "targets" (gift counts per tier). They are ignored:
+    # the wishlist has no fixed size, every tier can grow as long as the user likes.
     if int(s.get("deck_size", 0)) < 1:
         raise ValueError("settings.deck_size must be at least 1")
 
 
 def build_settings(min_price: float, small_max: float, big_min: float, big_max: float,
-                   big: int, medium: int, small: int, deck_size: int = 15) -> dict:
-    """Turn the four /setup price answers and three counts into settings."""
+                   deck_size: int = 15) -> dict:
+    """Turn the four /setup price answers into settings. There are no gift counts per tier."""
     s = {
         "tiers": {
             "small": [min_price, small_max],
             "medium": [small_max, big_min],
             "big": [big_min, big_max],
         },
-        "targets": {"big": big, "medium": medium, "small": small},
         "deck_size": deck_size,
         "explore_share": 0.2,
         "wildcard_share": 0.1,
@@ -131,6 +128,18 @@ def build_settings(min_price: float, small_max: float, big_min: float, big_max: 
     }
     validate_settings(s)
     return s
+
+
+def nearest_tier(price: float, settings: dict) -> str:
+    """The tier a price falls in, or the closest one for a price outside every range.
+
+    Used only for wishes the user brings in themselves (an imported list): a €400 wish above the
+    biggest range is still a big wish, and a €3 one below the smallest range is a small gift.
+    """
+    tier = tier_for_price(price, settings)
+    if tier:
+        return tier
+    return "big" if price > settings["tiers"]["big"][1] else "small"
 
 
 def tier_for_price(price: float, settings: dict) -> str | None:
@@ -175,13 +184,19 @@ def save_card(p: Paths, card: dict) -> None:
     write_json(p.feed / f"{card['id']}.json", card)
 
 
-def add_card(p: Paths, raw: dict, settings: dict) -> dict:
+def add_card(p: Paths, raw: dict, settings: dict, to_wishlist: bool = False) -> dict:
     """Validate a card found by /scout and store it. Raises ValueError on bad input.
 
     A card may give only its url (plus tags, reason, kind and source) when `cli.py check` read
     that page recently: title, shop, price and image then come from the checked page.
+
+    With `to_wishlist` the card is a wish the user imported from their own list: it goes straight
+    on the wishlist (and counts as a like for /learn), a price outside the tiers goes to the
+    nearest tier, and a product that is already a card is moved onto the wishlist instead.
     """
     if raw.get("type") == "question":
+        if to_wishlist:
+            raise ValueError("only gifts can go on the wishlist")
         return add_question(p, raw)
     raw = fill_from_pool(p, raw)
     missing = [f for f in REQUIRED_CARD_FIELDS if raw.get(f) in (None, "")]
@@ -193,12 +208,18 @@ def add_card(p: Paths, raw: dict, settings: dict) -> dict:
         price = round(float(raw["price"]), 2)
     except (TypeError, ValueError):
         raise ValueError(f"price must be a number in euros, got {raw['price']!r}")
-    tier = tier_for_price(price, settings)
+    tier = nearest_tier(price, settings) if to_wishlist else tier_for_price(price, settings)
     if tier is None:
         raise ValueError(f"price €{price} is outside all of the user's price tiers")
     key = normalise_url(raw["url"])
     for existing in load_cards(p):
         if existing.get("url") and normalise_url(existing["url"]) == key:
+            if to_wishlist and existing.get("type") == "gift":
+                if existing["status"] in ("liked", "loved"):
+                    raise ValueError(f"duplicate: already on your wishlist as {existing['id']}")
+                card = record_swipe(p, existing["id"], "like", imported=True)
+                card["moved"] = True
+                return card
             raise ValueError(f"duplicate: this product is already card {existing['id']}")
     kind = raw.get("kind", "fit")
     if kind not in CARD_KINDS:
@@ -219,8 +240,46 @@ def add_card(p: Paths, raw: dict, settings: dict) -> dict:
         "found_at": now_iso(),
         "status": "new",
     }
+    if to_wishlist:
+        card["imported_from"] = (raw.get("imported_from") or "").strip()
     save_card(p, card)
+    if to_wishlist:
+        card = record_swipe(p, card["id"], "like", imported=True)
     return card
+
+
+# ---------------------------------------------------------------- import
+
+URL_RE = re.compile(r"https?://\S+")
+
+
+def parse_import_list(text: str) -> list[dict]:
+    """Split a pasted wishlist into items: one per line, each either a link or words.
+
+    Bullets, numbering and checkboxes are stripped; blank lines and headings are skipped.
+    A line with a link keeps any words around it as a hint, for example "for the garden".
+    """
+    items, seen = [], set()
+    for line in text.splitlines():
+        line = re.sub(r"^\s*(?:(?:[-*•·+]|\d+[.)]|\[[ xX]?\])\s*)+", "", line).strip()
+        if not line or line.startswith("#"):
+            continue
+        m = URL_RE.search(line)
+        if m:
+            url = m.group(0).rstrip(".,;)]>\"'")
+            words = (line[: m.start()] + " " + line[m.end():]).strip(" -–—:|()[]<>\t")
+            key = normalise_url(url)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append({"line": line, "url": url, "words": re.sub(r"\s+", " ", words)})
+        else:
+            words = re.sub(r"\s+", " ", line)
+            if words.lower() in seen:
+                continue
+            seen.add(words.lower())
+            items.append({"line": line, "url": None, "words": words})
+    return items
 
 
 # ---------------------------------------------------------------- pool of checked products
@@ -340,20 +399,17 @@ def wishlist_counts(cards: list[dict]) -> Counter:
 def tier_quota(settings: dict, cards: list[dict], deck_size: int | None = None) -> dict[str, int]:
     """How many cards of each tier today's deck should hold.
 
-    Follows what the wishlist still needs; once every tier is full it follows the targets.
+    There are no fixed gift counts per tier, so the deck spreads evenly over the tiers.
+    A tier with no unseen cards simply hands its places to the others in build_deck.
     """
     deck_size = deck_size or int(settings["deck_size"])
-    targets = {t: int(settings["targets"][t]) for t in TIERS}
-    have = wishlist_counts(cards)
-    need = {t: max(targets[t] - have[t], 0) for t in TIERS}
-    weights = need if sum(need.values()) > 0 else targets
-    if sum(weights.values()) == 0:
-        weights = {t: 1 for t in TIERS}
+    weights = {t: 1 for t in TIERS}
     total = sum(weights.values())
     raw = {t: deck_size * weights[t] / total for t in TIERS}
     quota = {t: int(raw[t]) for t in TIERS}
-    # Largest remainder, so the quotas add up to the deck size.
-    for t in sorted(TIERS, key=lambda t: raw[t] - quota[t], reverse=True):
+    # Largest remainder, so the quotas add up to the deck size. On a tie the cheaper tier wins,
+    # so a deck of 10 is 4 small, 3 medium and 3 big.
+    for t in sorted(reversed(TIERS), key=lambda t: raw[t] - quota[t], reverse=True):
         if sum(quota.values()) >= deck_size:
             break
         if weights[t] > 0:
@@ -426,7 +482,8 @@ def interleave(cards: list[dict]) -> list[dict]:
 SWIPE_STATUS = {"like": "liked", "love": "loved", "owned": "owned", "later": "later", "dismiss": "dismissed", "removed": "removed"}
 
 
-def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None) -> dict:
+def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None,
+                 imported: bool = False) -> dict:
     card_path = p.feed / f"{card_id}.json"
     card = read_json(card_path, None)
     if card is None:
@@ -448,6 +505,8 @@ def record_swipe(p: Paths, card_id: str, action: str, answer: str | None = None)
             "at": now_iso(), "card": card_id, "action": action, "title": card["title"], "shop": card["shop"],
             "tier": card["tier"], "price": card["price"], "tags": card["tags"], "kind": card["kind"],
         }
+        if imported:
+            entry["imported"] = True
     save_card(p, card)
     p.swipes.parent.mkdir(parents=True, exist_ok=True)
     with p.swipes.open("a", encoding="utf-8") as f:
@@ -490,7 +549,9 @@ def taste_stats(swipes: list[dict]) -> dict:
         t = s.get("tier")
         if t in tier_actions:
             tier_actions[t][s["action"]] += 1
-            if s["action"] in ("like", "love", "dismiss"):
+            # Imported wishes count for taste, but not for price comfort: the user did not pick
+            # them against their tiers, and some sit outside them.
+            if s["action"] in ("like", "love", "dismiss") and not s.get("imported"):
                 bucket = "kept" if s["action"] != "dismiss" else "dismissed"
                 tier_prices[t][bucket].append(s["price"])
     likes = [(t, round(v, 1)) for t, v in tag_score.most_common() if v > 0]
@@ -535,12 +596,10 @@ def wishlist_items(cards: list[dict]) -> dict[str, list[dict]]:
 
 
 def write_wishlist(p: Paths) -> Path:
-    settings = read_json(p.settings, None)
     items = wishlist_items(load_cards(p))
     lines = ["# My wishlist", "", f"_Updated {date.today().isoformat()}. Generated by the gift feed; edit cards with /wishlist._", ""]
     for t in TIERS:
-        target = settings["targets"][t] if settings else "?"
-        lines.append(f"## {TIER_TITLES[t]} ({len(items[t])}/{target})")
+        lines.append(f"## {TIER_TITLES[t]} ({len(items[t])})")
         lines.append("")
         if not items[t]:
             lines.append("_Nothing yet._")
