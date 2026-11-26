@@ -5,7 +5,8 @@ Shops put their product facts in machine-readable tags for search engines: JSON-
 much faster and cheaper than having Claude read each page, so /scout uses this first and only
 falls back to Claude's own page reading for pages this cannot read (blocked or no product data).
 
-Polite by design: one request at a time per shop with a pause in between, robots.txt is honoured,
+Polite by design: one request at a time per shop with a pause in between (longer if the shop's
+robots.txt sets a Crawl-delay), robots.txt is honoured,
 and different shops are read in parallel. Standard library only.
 """
 
@@ -307,7 +308,8 @@ def extract_links(html: str, base_url: str, any_host: bool = False, limit: int =
         host = (parts.hostname or "").removeprefix("www.")
         if not any_host and host != base_host:
             return
-        if any_host and host == base_host and not listed:
+        same_site = host == base_host or host.endswith("." + base_host)  # company.shopltk.com is LTK too
+        if any_host and same_site and not listed:
             return  # on a guide, the links worth following point to shops
         if host in ("instagram.com", "facebook.com", "pinterest.com", "x.com", "twitter.com", "tiktok.com", "youtube.com"):
             return
@@ -342,6 +344,7 @@ class Fetcher:
         self._locks: dict[str, threading.Lock] = {}
         self._last: dict[str, float] = {}
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
+        self._crawl_delay: dict[str, float] = {}  # a shop's own "Crawl-delay" in robots.txt
         self._guard = threading.Lock()
 
     def _host_lock(self, host: str) -> threading.Lock:
@@ -350,7 +353,7 @@ class Fetcher:
 
     def _wait_turn(self, host: str) -> None:
         if host in self._last:
-            wait = self._last[host] + self.delay - time.monotonic()
+            wait = self._last[host] + max(self.delay, self._crawl_delay.get(host, 0)) - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
 
@@ -390,6 +393,12 @@ class Fetcher:
             except Exception:
                 rp = None
             self._robots[origin] = rp
+            try:
+                cd = rp.crawl_delay(USER_AGENT) if rp else None
+            except (TypeError, ValueError):
+                cd = None
+            if cd:
+                self._crawl_delay[(parts.hostname or "").lower()] = min(float(cd), 30.0)
             self._last[(parts.hostname or "").lower()] = time.monotonic()
         rp = self._robots[origin]
         return rp is None or rp.can_fetch(USER_AGENT, url)

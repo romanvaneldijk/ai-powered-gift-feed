@@ -44,7 +44,7 @@ Repeat `/scout` and `/feed` each day. Want to try the notebook first? Run
 | `/setup` | The onboarding game. Saves your profile, concrete search hints for `/scout` and your price tiers. Replay one round with `/setup <round>`, for example `/setup wishes`. |
 | `/scout` | Finds new gift ideas that fit your profile, checks each link and price, and adds them to your feed. |
 | `/scout add-site <url>` | Adds a shop or blog you like. `/scout` checks it first on every run. |
-| `/scout add-insta <url>` | Adds an Instagram gift guide post or account. Claude finds the products it mentions in a shop. |
+| `/scout add-insta <url>` | Adds an Instagram gift guide post or account, or a creator's LTK page. Claude finds the products it mentions in a shop. |
 | `/feed` | Today's gift notebook in your browser (→ put it on the list, ↓ kinda, maybe later, ← don't like it, ↑ already own it), then `/learn`. |
 | `/learn` | Updates your likes, dislikes and "curious about" from your latest swipes. Runs after `/feed` automatically. |
 | `/wishlist` | Shows your list by tier. Use `remove <id>` to drop an item, `check` to find dead links, and `export` to make a page you can share with family. |
@@ -71,7 +71,7 @@ All personal files live in `me/`, which is in `.gitignore`:
 me/
 ├── settings.json   your price tiers, gift counts and deck size
 ├── profile.md      your taste profile (written by /setup and /learn)
-├── sources.md      your favourite sites and Instagram gift guides
+├── sources.md      your favourite sites, Instagram gift guides and LTK pages
 ├── feed/           one JSON file per gift idea
 ├── pool.json       checked products waiting for a later deck
 ├── swipes.jsonl    every swipe
@@ -90,6 +90,14 @@ heavy part, so `/scout` keeps them small and fast:
   parallel and pulls the title, price, stock and photo from the data shops publish for search
   engines (schema.org JSON-LD, OpenGraph tags). Claude only reads a page itself when a shop blocks
   scripts. Each shop still gets one page at a time with a pause in between, and robots.txt is honoured.
+- **Shops are searched with their own search page.** `python3 app/cli.py search "koffie cadeau" …`
+  turns your search hints into searches on each favourite shop's own search page and reads name,
+  price, photo and link from the results, without Claude. Results that don't hold a word of the
+  search are left out, because shop searches are fuzzy. Each shop has a small recipe
+  (`app/shops.py`): Shopify shops answer a public JSON search, other shops get their results page
+  read. Add your own with a `search:` URL in `me/sources.md`. Shops whose robots.txt asks scripts
+  not to read search pages (bol.com, Dille & Kamille) get a normal web search instead, and a shop's
+  `Crawl-delay` is honoured.
 - **Batched searches.** All searches of a round go out at once, with at most two rounds per run.
 - **Nothing is read twice.** Checked products that did not make today's deck wait in `me/pool.json`
   for the next run, and shop search pages that work are remembered in `me/sources.md`.
@@ -101,6 +109,11 @@ Check your own numbers with `/usage` in Claude Code.
 
 - **Instagram** often blocks automated page reads. When that happens, `/scout` carries on with your
   other sources and asks you to paste the caption or drop in a screenshot of the post next time.
+- **LTK pages** (shopltk.com) are read once per `/scout` run for product ideas. LTK's robots.txt asks
+  scripts not to follow its product links, so `/scout` finds the same product (or a close match) in a
+  shop that sells in euros and links to that shop, with the LTK page as credit. LTK also blocks AI
+  crawlers, so the page is only read on your request, one page at a time, and the creator's photos
+  are never used.
 - **Shops:** Claude reads single product pages at a human pace for your personal use and always
   links to the shop. Respect each site's terms.
 - **Prices and stock** change over time. `/wishlist check` finds links that no longer work.
@@ -108,6 +121,7 @@ Check your own numbers with `/usage` in Claude Code.
 ## For developers
 
 - `app/giftfeed.py`: core logic (tiers, cards, deck, swipes, stats). Python standard library only.
+- `app/shops.py`: shop search recipes for `cli.py search` (Shopify JSON search, results-page reader).
 - `app/cli.py`: helper commands the slash commands call (`python3 app/cli.py -h`).
 - `app/scout.py`: the fast page reader behind `cli.py check` and `cli.py links`.
 - `app/feed.py` and `app/static/index.html`: the local gift notebook page.
