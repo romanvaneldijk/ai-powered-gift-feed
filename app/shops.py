@@ -29,25 +29,29 @@ from urllib.parse import quote_plus, urljoin, urlsplit
 
 import scout
 
+# Search only a product's name, type, tags and brand (not its description), and skip sold-out ones.
+SHOPIFY_OPTIONS = ("&resources[options][fields]=title,product_type,tag,vendor,variants.title"
+                   "&resources[options][unavailable_products]=hide")
+
 # Host (without www.) -> recipe. "checked" says when the recipe was last seen working.
 RECIPES: dict[str, dict] = {
     # Shopify shops: the suggest.json search is public, and both shops' robots.txt allow it.
     "bonneuniform.com": {
         "name": "Bonne Uniform",
         "kind": "shopify",
-        "search": "https://bonneuniform.com/search/suggest.json?q={q}&resources[type]=product&resources[limit]=10",
+        "search": "https://bonneuniform.com/search/suggest.json?q={q}&resources[type]=product&resources[limit]=10" + SHOPIFY_OPTIONS,
     },
     "cookinglife.nl": {
         "name": "Cookinglife",
         "kind": "shopify",
-        "search": "https://www.cookinglife.nl/search/suggest.json?q={q}&resources[type]=product&resources[limit]=10",
+        "search": "https://www.cookinglife.nl/search/suggest.json?q={q}&resources[type]=product&resources[limit]=10" + SHOPIFY_OPTIONS,
     },
-    # Magento shop with "Crawl-delay: 10", which the Fetcher honours. Its robots.txt disallows the
-    # standard /catalogsearch/ path; this Dutch search address is a best guess, not yet confirmed.
+    # Magento shop: its search lives under /catalogsearch/, which its robots.txt disallows
+    # ("Disallow: /catalogsearch/*"). So no recipe: /scout uses a web search there.
     "dille-kamille.nl": {
         "name": "Dille & Kamille",
-        "kind": "html",
-        "search": "https://www.dille-kamille.nl/zoeken/?q={q}",
+        "search": None,
+        "note": "Dille & Kamille asks scripts not to read its search pages: use a web search",
     },
     # bol.com's robots.txt has "Disallow: /*/s/", which is its search page. So no recipe:
     # /scout uses a web search (site:bol.com …) for bol.com instead.
@@ -131,9 +135,35 @@ def parse_shopify(body: str, base_url: str, shop: str | None = None) -> list[dic
         if isinstance(image, str) and image.startswith("//"):
             image = "https:" + image
         url = urljoin(base_url, p["url"]).split("?")[0]
+        tags = p.get("tags") if isinstance(p.get("tags"), list) else []
+        words = " ".join(str(x) for x in [p.get("title"), p.get("type"), p.get("vendor"), p.get("handle"), *tags] if x)
         out.append({"title": clean(p.get("title")), "price": price, "image": image or None, "url": url,
-                    "in_stock": p["available"] if isinstance(p.get("available"), bool) else None, "shop": shop})
+                    "in_stock": p["available"] if isinstance(p.get("available"), bool) else None, "shop": shop,
+                    "_words": words})
     return out
+
+
+# Words that say nothing about the product itself, so they never decide a match.
+FILLER = {"cadeau", "cadeaus", "cadeautje", "gift", "gifts", "present", "voor", "for", "de", "het", "een", "en",
+          "met", "van", "the", "and", "with", "a", "of", "set", "mooi", "mooie", "leuk", "leuke", "nice"}
+
+
+def _fold(text: str) -> str:
+    import unicodedata
+    text = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in text if not unicodedata.combining(c))
+
+
+def relevant(result: dict, query: str) -> bool:
+    """True when a result's name (or, for Shopify, its type, tags, brand or handle) holds at least one
+    real word of the search. Shop searches are fuzzy: "trui" can return trousers and candles.
+    Substrings count, so "koffie" matches "koffiekopjes" and "trui" matches "truien"."""
+    words = [w for w in re.findall(r"\w+", _fold(query)) if w not in FILLER and len(w) >= 3]
+    if not words:
+        return True
+    hay = _fold(" ".join([result.get("title") or "", result.get("_words") or "",
+                          urlsplit(result.get("url") or "").path.replace("-", " ")]))
+    return any(w in hay for w in words)
 
 
 def _jsonld_results(html: str, base_url: str, shop: str | None) -> list[dict]:
@@ -231,8 +261,14 @@ def search_shop(fetcher: scout.Fetcher, host: str, recipe: dict, query: str, lim
         found = parse_shopify(body, res["url"], base["shop"])
     else:
         found = parse_html(body, res["url"], base["shop"], limit=limit * 2)
-    found = [r for r in found if host_of(r["url"]) == host or host_of(r["url"]).endswith("." + host)][:limit]
-    return base | {"status": "ok" if found else "no-results", "results": found}
+    found = [r for r in found if host_of(r["url"]) == host or host_of(r["url"]).endswith("." + host)]
+    matching = [r for r in found if relevant(r, query)]
+    for r in found:
+        r.pop("_words", None)
+    out = base | {"status": "ok" if matching else "no-results", "results": matching[:limit]}
+    if len(matching) < len(found):
+        out["dropped"] = f"{len(found) - len(matching)} results without the search words"
+    return out
 
 
 def search_many(jobs: list[tuple[str, dict, str]], fetcher: scout.Fetcher | None = None,

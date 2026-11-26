@@ -308,7 +308,8 @@ def extract_links(html: str, base_url: str, any_host: bool = False, limit: int =
         host = (parts.hostname or "").removeprefix("www.")
         if not any_host and host != base_host:
             return
-        if any_host and host == base_host and not listed:
+        same_site = host == base_host or host.endswith("." + base_host)  # company.shopltk.com is LTK too
+        if any_host and same_site and not listed:
             return  # on a guide, the links worth following point to shops
         if host in ("instagram.com", "facebook.com", "pinterest.com", "x.com", "twitter.com", "tiktok.com", "youtube.com"):
             return

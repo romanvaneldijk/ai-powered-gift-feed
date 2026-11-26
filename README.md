@@ -92,10 +92,11 @@ heavy part, so `/scout` keeps them small and fast:
   scripts. Each shop still gets one page at a time with a pause in between, and robots.txt is honoured.
 - **Shops are searched with their own search page.** `python3 app/cli.py search "koffie cadeau" …`
   turns your search hints into searches on each favourite shop's own search page and reads name,
-  price, photo and link from the results, without Claude. Each shop has a small recipe
+  price, photo and link from the results, without Claude. Results that don't hold a word of the
+  search are left out, because shop searches are fuzzy. Each shop has a small recipe
   (`app/shops.py`): Shopify shops answer a public JSON search, other shops get their results page
   read. Add your own with a `search:` URL in `me/sources.md`. Shops whose robots.txt asks scripts
-  not to read search pages (such as bol.com) get a normal web search instead, and a shop's
+  not to read search pages (bol.com, Dille & Kamille) get a normal web search instead, and a shop's
   `Crawl-delay` is honoured.
 - **Batched searches.** All searches of a round go out at once, with at most two rounds per run.
 - **Nothing is read twice.** Checked products that did not make today's deck wait in `me/pool.json`

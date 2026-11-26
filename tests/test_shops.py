@@ -65,12 +65,30 @@ SOURCES = """# My gift sources
 class ParseTests(unittest.TestCase):
     def test_shopify_suggest(self):
         res = shops.parse_shopify(SHOPIFY, "https://bonneuniform.com/search/suggest.json?q=x", "Bonne Uniform")
+        res[0].pop("_words")
         self.assertEqual(res[0], {"title": "Moerheim blue keel", "price": 89.0, "in_stock": True,
                                   "image": "https://bonneuniform.com/cdn/shop/files/keel.jpg",
                                   "url": "https://bonneuniform.com/products/moerheim-blue-keel", "shop": "Bonne Uniform"})
         self.assertEqual(res[1]["image"], "https://bonneuniform.com/cdn/shop/files/suit.jpg")
         self.assertFalse(res[1]["in_stock"])
         self.assertEqual(shops.parse_shopify("<html>not json", "https://x.example/"), [])
+
+    def test_relevance_drops_fuzzy_matches(self):
+        res = shops.parse_shopify(json.dumps({"resources": {"results": {"products": [
+            {"title": "Port", "url": "/products/port-bonne-pants", "price": "112.00", "type": "Broek", "tags": ["wol"]},
+            {"title": "Moerheim", "url": "/products/moerheim-keel", "price": "100.00", "type": "Truien"},
+            {"title": "Grijze trui met col", "url": "/products/grijs", "price": "90.00"},
+        ]}}}), "https://bonneuniform.com/")
+        self.assertEqual([r["title"] for r in res if shops.relevant(r, "trui cadeau")], ["Moerheim", "Grijze trui met col"])
+        self.assertTrue(shops.relevant({"title": "Cosy & Trendy Koffiekopjes", "url": ""}, "koffie"))
+        self.assertTrue(shops.relevant({"title": "Anything", "url": ""}, "cadeau voor"))  # only filler words
+
+    def test_ltk_page_keeps_shop_links_and_skips_ltk_footer(self):
+        html = ('<a href="https://on.ltk.com/+RuUmiCxK9X?li=1&amp;pt=product_gallery">H &amp; M boots $49.99</a>'
+                '<a href="https://company.shopltk.com/ltk-terms-of-service">Terms of Service</a>'
+                '<a href="https://www.shopltk.com/explore/OtherCreator">Other</a>')
+        links = scout.extract_links(html, "https://www.shopltk.com/explore/WhatToWearFor_/", any_host=True)
+        self.assertEqual([l["url"] for l in links], ["https://on.ltk.com/+RuUmiCxK9X?li=1&pt=product_gallery"])
 
     def test_html_tiles(self):
         res = shops.parse_html(TILES, "https://www.cookinglife.nl/zoeken?q=koffie", "Cookinglife")
@@ -166,7 +184,9 @@ class LiveTests(unittest.TestCase):
         lines = self.run_cli("search", "koffie", "--check", "--check-max", "1", "--delay", "0")
         first = json.loads(lines[0])
         self.assertEqual(first["status"], "ok")
-        self.assertEqual([r["tier"] for r in first["results"]], ["medium", "small", "medium"])
+        # Only the grinder holds the word "koffie": the dripper and moka pot are left out.
+        self.assertEqual([r["tier"] for r in first["results"]], ["medium"])
+        self.assertEqual(first["dropped"], "2 results without the search words")
         checked = [json.loads(l) for l in lines if l.startswith("{") and '"status": "ok"' in l and "page" not in l]
         self.assertEqual(checked[0]["title"], "Hario handkoffiemolen")
         # The checked page is in the pool, so it can become a card by its URL.
