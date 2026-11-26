@@ -109,10 +109,11 @@ Check your own numbers with `/usage` in Claude Code.
 
 - **Instagram** often blocks automated page reads. When that happens, `/scout` carries on with your
   other sources and asks you to paste the caption or drop in a screenshot of the post next time.
-- **LTK pages** (shopltk.com) are read once per `/scout` run. Their product links usually lead to
-  the shop, and when that shop sells in euros the card links straight to it, with the LTK page as
-  credit. LTK's robots.txt blocks AI crawlers, so the page is only read on your request, one page
-  at a time, and the creator's photos are never used.
+- **LTK pages** (shopltk.com) are read once per `/scout` run for product ideas. LTK's robots.txt asks
+  scripts not to follow its product links, so `/scout` finds the same product (or a close match) in a
+  shop that sells in euros and links to that shop, with the LTK page as credit. LTK also blocks AI
+  crawlers, so the page is only read on your request, one page at a time, and the creator's photos
+  are never used.
 - **Shops:** Claude reads single product pages at a human pace for your personal use and always
   links to the shop. Respect each site's terms.
 - **Prices and stock** change over time. `/wishlist check` finds links that no longer work.

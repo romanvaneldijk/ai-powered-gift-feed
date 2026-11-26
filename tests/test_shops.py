@@ -197,6 +197,7 @@ class LiveTests(unittest.TestCase):
         self.assertNotIn(checked[0]["url"], [r["url"] for r in again["results"]])
 
     def test_creator_page_link_through_redirect_becomes_card(self):
+        """For creator pages whose redirects robots.txt allows (LTK's on.ltk.com does not)."""
         shop = self.base + "/p/hario-grinder-12345/"
         redirect = self.base.replace("127.0.0.1", "localhost") + "/r/1?to=" + shop
         PAGES["/ltk"] = (200, f'<html><body><a href="{redirect}">Hario grinder</a>'
